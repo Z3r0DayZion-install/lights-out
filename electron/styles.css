@@ -1841,6 +1841,21 @@ body.mini-mode .action-btn {
 }
 
 .lights-section .btn-small:hover {
+
+.btn-tiny {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 2px 6px;
+  line-height: 1;
+}
+.btn-tiny:hover {
+  background: var(--accent-cyan);
+  color: #000;
+}
   background: var(--bg-hover);
   color: var(--text-primary);
 }

@@ -43,6 +43,9 @@ jobs:
           node --check updater.js
           node --check calendarProviders.js
           node --check companion.js
+          node --check media.js
+          node --check unsavedGuard.js
+          node --check family.js
 
       - name: Smoke tests
         run: npm run smoke

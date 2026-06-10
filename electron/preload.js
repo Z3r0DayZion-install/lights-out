@@ -145,5 +145,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getCalendarSettings: () => ipcRenderer.invoke('get-calendar-settings'),
 
   // Companion PWA
-  getCompanionStatus: () => ipcRenderer.invoke('get-companion-status')
+  getCompanionStatus: () => ipcRenderer.invoke('get-companion-status'),
+
+  // Family mode
+  getFamilyPeers: () => ipcRenderer.invoke('get-family-peers'),
+  familyRemoteStart: (ip, durationSeconds, action) => ipcRenderer.invoke('family-remote-start', ip, durationSeconds, action),
+  familyRemotePause: (ip) => ipcRenderer.invoke('family-remote-pause', ip),
+  familyRemoteResume: (ip) => ipcRenderer.invoke('family-remote-resume', ip),
+  familyRemoteCancel: (ip) => ipcRenderer.invoke('family-remote-cancel', ip),
+  familyRemoteSnooze: (ip, seconds) => ipcRenderer.invoke('family-remote-snooze', ip, seconds),
+
+  // Media
+  getMediaSessions: () => ipcRenderer.invoke('get-media-sessions'),
+  onMediaPaused: (cb) => ipcRenderer.on('media-paused', (e, data) => cb(data)),
+  onUnsavedWorkWarning: (cb) => ipcRenderer.on('unsaved-work-warning', (e, data) => cb(data))
 });

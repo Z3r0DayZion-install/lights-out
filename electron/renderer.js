@@ -125,12 +125,23 @@ const fallbackApi = (() => {
     onPlaySound: () => {},
     onPlayLastLight: () => {},
     onDimPhaseStarted: () => {},
+    onMediaPaused: () => {},
+    onUnsavedWorkWarning: () => {},
     onDimPhaseEnded: () => {},
     getStreaks: async () => ({ streak: 0, bestStreak: 0, totalNights: 0, achievements: [], weekAvg: '--:--', weekOnTime: 0, weekDays: [] }),
     getAchievementsCatalog: async () => [],
     getWeeklyReport: async () => null,
     getSleepScore: async () => ({ score: null, label: 'Preview', breakdown: {} }),
     getCompanionStatus: async () => ({ running: false, port: 0, clients: 0, url: '' }),
+    getFamilyPeers: async () => [],
+    familyRemoteStart: async () => ({ success: true }),
+    familyRemotePause: async () => ({ success: true }),
+    familyRemoteResume: async () => ({ success: true }),
+    familyRemoteCancel: async () => ({ success: true }),
+    familyRemoteSnooze: async () => ({ success: true }),
+    getMediaSessions: async () => [],
+    onMediaPaused: (cb) => {},
+    onUnsavedWorkWarning: (cb) => {},
     addCustomSequence: async () => null,
     removeCustomSequence: async () => ({ success: true }),
     getOpenBrowsers: async () => [],
@@ -310,8 +321,10 @@ const els = {
   btnCancelCustomSeq: document.getElementById('btn-cancel-custom-seq'),
   // Widget
   btnWidget: document.getElementById('btn-widget'),
-  // Companion
-  btnCompanion: document.getElementById('btn-companion'),
+  // Family mode
+  btnFamilyScan: document.getElementById('btn-family-scan'),
+  familyStatus: document.getElementById('family-status'),
+  familyPeers: document.getElementById('family-peers'),
   // Status pill
   statusPill: document.getElementById('status-pill'),
   statusDot: document.getElementById('status-dot'),
@@ -1108,6 +1121,43 @@ function wireEvents() {
       }
     } catch {}
   });
+
+  // Family mode scan and remote controls.
+  els.btnFamilyScan?.addEventListener('click', async () => {
+    try {
+      els.familyStatus.textContent = 'Scanning...';
+      const peers = await api.getFamilyPeers?.();
+      renderFamilyPeers(peers || []);
+      els.familyStatus.textContent = peers?.length ? `${peers.length} peer(s) found` : 'No peers found';
+    } catch {
+      els.familyStatus.textContent = 'Scan failed';
+    }
+  });
+
+function renderFamilyPeers(peers) {
+  if (!els.familyPeers) return;
+  if (!peers.length) {
+    els.familyPeers.innerHTML = '<p style="font-size:11px;color:var(--text-muted)">No other Lights Out instances found on your network.</p>';
+    return;
+  }
+  els.familyPeers.innerHTML = peers.map(p => `
+    <div class="family-peer" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bg-card)">
+      <span style="flex:1;font-size:12px">&#x1F5A5; ${p.name || p.ip} <small style="color:var(--text-muted)">${p.ip}</small></span>
+      <button class="btn-tiny" onclick="familyRemote('${p.ip}','start',30)" title="Start 30-min timer">&#x25B6;</button>
+      <button class="btn-tiny" onclick="familyRemote('${p.ip}','pause')" title="Pause">&#x23F8;</button>
+      <button class="btn-tiny" onclick="familyRemote('${p.ip}','cancel')" title="Cancel">&#x274C;</button>
+    </div>
+  `).join('');
+}
+
+window.familyRemote = async function(ip, action, duration) {
+  try {
+    if (action === 'start') await api.familyRemoteStart?.(ip, (duration || 30) * 60, 'shutdown');
+    else if (action === 'pause') await api.familyRemotePause?.(ip);
+    else if (action === 'cancel') await api.familyRemoteCancel?.(ip);
+    notify(`Command sent to ${ip}`, 'info');
+  } catch { notify('Command failed', 'error'); }
+};
   els.btnPlus.addEventListener('click', () => {
     els.timerInput.value = inputValue() + 1;
     setInputFromSeconds(inputSeconds());
@@ -2543,6 +2593,21 @@ api.onUpdateAvailable?.(data => {
     els.badgeUpdate.addEventListener('click', () => {
       api.openExternal?.(data.downloadUrl || data.releaseUrl);
     }, { once: true });
+  }
+});
+
+// Media auto-paused notification.
+api.onMediaPaused?.(data => {
+  if (data?.players?.length) {
+    notify(`Media paused: ${data.players.join(', ')}`, 'info');
+  }
+});
+
+// Unsaved work warning notification.
+api.onUnsavedWorkWarning?.(data => {
+  if (data?.warnings?.length) {
+    const apps = data.warnings.map(w => w.process).join(', ');
+    notify(`Unsaved work in ${apps}. Save now! Shutdown delayed 10s.`, 'warning');
   }
 });
 

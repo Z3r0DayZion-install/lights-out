@@ -11,6 +11,9 @@ const alarm = require('./alarm');
 const updater = require('./updater');
 const calProviders = require('./calendarProviders');
 const companion = require('./companion');
+const media = require('./media');
+const unsavedGuard = require('./unsavedGuard');
+const family = require('./family');
 
 const APP_ICON = path.join(__dirname, 'assets', 'icon.ico');
 
@@ -533,6 +536,22 @@ async function completeTimer() {
   // Record a streak event for the completed ritual.
   try { streaks.recordEvent(null, timerState.action, false); } catch {}
 
+  // Unsaved work guardian: check for unsaved work before power action.
+  if (!timerState.dryRun) {
+    try {
+      const unsaved = await unsavedGuard.scanUnsavedWork();
+      if (unsaved.length > 0) {
+        const titles = unsaved.map(w => `"${w.title}" (${w.process})`).join(', ');
+        showNativeNotification('Lights Out', `Unsaved work detected: ${titles}. Save before shutdown!`);
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('unsaved-work-warning', { warnings: unsaved });
+        }
+        // Delay the power action by 10 seconds to give the user time to save.
+        await new Promise(resolve => setTimeout(resolve, 10000));
+      }
+    } catch { /* best-effort */ }
+  }
+
   await playLastLightRitual(timerState.dryRun);
   await executePowerAction({ ...timerState });
 }
@@ -566,6 +585,12 @@ function applyDimPhase(remainingSeconds, totalSeconds) {
   applyNightMode(true);
   // Focus mode: close distracting apps during dim phase.
   applyFocusMode(true);
+  // Media auto-pause: pause detected media players during dim phase.
+  media.pauseAllDetectedMedia().then(result => {
+    if (result.count > 0 && mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('media-paused', { players: result.paused });
+    }
+  }).catch(() => {});
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('dim-phase-started', { remainingSeconds, totalSeconds });
   }
@@ -611,6 +636,8 @@ function restoreAfterTimer() {
   executePowerShell(
     'Remove-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\CloudStore\\Store\\DefaultAccount\\Current\\default$windows.data.bluelightreduction\\windows.data.bluelightreduction.bluelightreductionstate" -Name "Data" -ErrorAction SilentlyContinue'
   ).catch(() => {});
+  // Resume media that was auto-paused during dim phase.
+  media.resumeAllMedia().catch(() => {});
 }
 
 // First Light: the morning bookend to Last Light.
@@ -995,6 +1022,27 @@ ipcMain.handle('get-calendar-settings', async () => {
 });
 ipcMain.handle('get-companion-status', async () => {
   return companion.getStatus();
+});
+ipcMain.handle('get-family-peers', async () => {
+  return family.getPeers();
+});
+ipcMain.handle('family-remote-start', async (e, ip, durationSeconds, action) => {
+  return family.remoteStart(ip, durationSeconds, action);
+});
+ipcMain.handle('family-remote-pause', async (e, ip) => {
+  return family.remotePause(ip);
+});
+ipcMain.handle('family-remote-resume', async (e, ip) => {
+  return family.remoteResume(ip);
+});
+ipcMain.handle('family-remote-cancel', async (e, ip) => {
+  return family.remoteCancel(ip);
+});
+ipcMain.handle('family-remote-snooze', async (e, ip, seconds) => {
+  return family.remoteSnooze(ip, seconds || 300);
+});
+ipcMain.handle('get-media-sessions', async () => {
+  try { return await media.detectMediaSessions(); } catch { return []; }
 });
 ipcMain.handle('resume-recoverable-timer', async () => {
   const snapshot = getRecoverableTimer();
@@ -1401,6 +1449,32 @@ app.whenReady().then(async () => {
   // Broadcast timer state to companion clients periodically.
   setInterval(broadcastCompanionState, 2000);
 
+  // Start family mode: discovery + command server.
+  family.startDiscovery();
+  family.startCommandServer((cmd) => {
+    if (!cmd || !cmd.command) return;
+    switch (cmd.command) {
+      case 'start':
+        startTimer({
+          durationSeconds: cmd.durationSeconds || 1800,
+          action: cmd.action || 'shutdown'
+        });
+        break;
+      case 'pause':
+        if (timerState.running && !timerState.paused) pauseTimer();
+        break;
+      case 'resume':
+        if (timerState.running && timerState.paused) resumeTimer();
+        break;
+      case 'snooze':
+        if (timerState.running) snoozeTimer(cmd.seconds || 300);
+        break;
+      case 'cancel':
+        if (timerState.running) cancelTimer();
+        break;
+    }
+  });
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
@@ -1420,4 +1494,6 @@ app.on('before-quit', () => {
   clearTimerInterval();
   globalShortcut.unregisterAll();
   companion.stop();
+  family.stopDiscovery();
+  family.stopCommandServer();
 });
