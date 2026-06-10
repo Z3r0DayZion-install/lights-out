@@ -541,9 +541,27 @@ function applyDimPhase(remainingSeconds, totalSeconds) {
   }
   // Enable Windows dark mode (system-wide) during wind-down.
   applyNightMode(true);
+  // Focus mode: close distracting apps during dim phase.
+  applyFocusMode(true);
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('dim-phase-started', { remainingSeconds, totalSeconds });
   }
+}
+
+// Focus mode: close configurable distracting apps during wind-down.
+function applyFocusMode(enable) {
+  const appSettings = settingsStore.getSection('app') || {};
+  const blocklist = appSettings.focusBlocklist || [];
+  if (!blocklist.length) return;
+
+  if (enable) {
+    // Gracefully close each blocked app.
+    const cmd = blocklist.map(proc =>
+      `Get-Process -Name '${proc}' -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -ne '' } | ForEach-Object { $_.CloseMainWindow() | Out-Null }`
+    ).join('; ');
+    executePowerShell(cmd).catch(() => {});
+  }
+  // On disable, we don't restart the apps (the user will reopen what they need).
 }
 
 function applyNightMode(enable) {
@@ -795,6 +813,9 @@ ipcMain.handle('get-streaks', async () => {
 });
 ipcMain.handle('get-achievements-catalog', async () => {
   try { return streaks.getAchievementCatalog(); } catch { return []; }
+});
+ipcMain.handle('get-weekly-report', async () => {
+  try { return streaks.getWeeklyReport(); } catch { return null; }
 });
 ipcMain.handle('add-custom-sequence', async (event, seq) => {
   const entry = lastLight.addCustomSequence(seq);

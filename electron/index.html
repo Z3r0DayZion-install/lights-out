@@ -358,7 +358,7 @@
         <span class="badge update-badge" id="badge-update" style="display:none" title="Update available">UPDATE</span>
       </div>
       <div class="footer-right">
-        <span id="version">v6.0.0</span>
+        <span id="version">v6.1.0</span>
       </div>
     </footer>
 
@@ -410,6 +410,11 @@
             <input type="checkbox" id="chk-run-login">
             Run at login (start minimized and idle)
           </label>
+        </div>
+        <div class="option-group">
+          <label>Focus Mode - Apps to close during wind-down</label>
+          <input type="text" id="focus-blocklist" placeholder="e.g. chrome,discord,spotify" style="width:100%">
+          <span style="font-size:9px;color:var(--text-muted)">Comma-separated process names. Closed gracefully during the dim phase.</span>
         </div>
 
         <!-- Smart Lights Section -->

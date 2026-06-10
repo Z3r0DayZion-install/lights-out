@@ -21,7 +21,8 @@ const DEFAULTS = {
     forceShutdown: false,
     muteSystem: false,
     graceMinutes: 2,
-    dryRun: false
+    dryRun: false,
+    focusBlocklist: []
   },
   smartLights: {
     enabled: false,

@@ -1,6 +1,6 @@
 {
   "name": "lights-out-electron",
-  "version": "6.0.0",
+  "version": "6.1.0",
   "description": "Lights Out - Sleep Timer (Electron Edition)",
   "main": "main.js",
   "scripts": {

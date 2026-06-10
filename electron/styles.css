@@ -1206,6 +1206,17 @@ body.warm-shift .cockpit {
   font-size: 12px;
   padding: 0 4px;
 }
+.custom-seq-item .seq-item-share {
+  cursor: pointer;
+  color: var(--accent-blue);
+  border: none;
+  background: none;
+  font-size: 12px;
+  padding: 0 4px;
+}
+.custom-seq-item .seq-item-share:hover {
+  color: var(--accent-cyan);
+}
 .custom-seq-builder {
   background: var(--bg-secondary);
   border-radius: 6px;

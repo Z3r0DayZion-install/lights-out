@@ -170,6 +170,51 @@ function getAchievementCatalog() {
   ];
 }
 
+// Digital wellbeing report: a weekly summary with trend data.
+function getWeeklyReport() {
+  const data = load();
+  const now = new Date();
+  const weekAgo = new Date(now - 7 * 86400000).toISOString().slice(0, 10);
+  const recent = data.events.filter(e => e.date >= weekAgo);
+  const total = data.events.length;
+
+  // Bedtime trend (last 7 days, oldest first).
+  const trend = recent.map(e => {
+    const [h, m] = (e.bedTime || '23:00').split(':').map(Number);
+    return { date: e.date, bedTime: e.bedTime, mins: h * 60 + m };
+  }).sort((a, b) => a.date.localeCompare(b.date));
+
+  // Consistency: standard deviation of bedtimes (lower = more consistent).
+  let consistency = 0;
+  if (trend.length > 1) {
+    const mean = trend.reduce((s, t) => s + t.mins, 0) / trend.length;
+    const variance = trend.reduce((s, t) => s + Math.pow(t.mins - mean, 2), 0) / trend.length;
+    consistency = Math.round(Math.sqrt(variance));
+  }
+
+  // Snooze rate.
+  const snoozeCount = recent.filter(e => e.snoozed).length;
+  const snoozeRate = recent.length ? Math.round(snoozeCount / recent.length * 100) : 0;
+
+  // Action breakdown.
+  const actionCounts = {};
+  recent.forEach(e => { actionCounts[e.action] = (actionCounts[e.action] || 0) + 1; });
+
+  return {
+    weekStart: weekAgo,
+    weekEnd: now.toISOString().slice(0, 10),
+    nightsThisWeek: recent.length,
+    totalNights: total,
+    streak: data.streak || 0,
+    bestStreak: data.bestStreak || 0,
+    consistency,
+    snoozeRate,
+    actionCounts,
+    trend,
+    achievements: data.achievements || []
+  };
+}
+
 function formatTime() {
   const now = new Date();
   return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -180,6 +225,7 @@ module.exports = {
   getSummary,
   getWeekStats,
   getAchievementCatalog,
+  getWeeklyReport,
   // Testing helpers.
   _load: load,
   _reset: () => { cache = null; }

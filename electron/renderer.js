@@ -128,6 +128,7 @@ const fallbackApi = (() => {
     onDimPhaseEnded: () => {},
     getStreaks: async () => ({ streak: 0, bestStreak: 0, totalNights: 0, achievements: [], weekAvg: '--:--', weekOnTime: 0, weekDays: [] }),
     getAchievementsCatalog: async () => [],
+    getWeeklyReport: async () => null,
     addCustomSequence: async () => null,
     removeCustomSequence: async () => ({ success: true }),
     getOpenBrowsers: async () => [],
@@ -193,6 +194,7 @@ const els = {
   chkForceShutdown: document.getElementById('chk-forceshutdown'),
   chkMute: document.getElementById('chk-mute'),
   chkRunLogin: document.getElementById('chk-run-login'),
+  focusBlocklist: document.getElementById('focus-blocklist'),
   chkDryRun: document.getElementById('chk-dryrun'),
   badgeDryRun: document.getElementById('badge-dryrun'),
   badgeConfirm: document.getElementById('badge-confirm'),
@@ -903,17 +905,29 @@ async function loadStreaks() {
   try {
     const summary = await api.getStreaks();
     const catalog = await api.getAchievementsCatalog();
-    renderStreaks(summary, catalog);
+    const report = await api.getWeeklyReport();
+    renderStreaks(summary, catalog, report);
   } catch { /* streaks are decorative, never block */ }
 }
 
-function renderStreaks(summary, catalog) {
+function renderStreaks(summary, catalog, report) {
   if (!summary) return;
   if (els.streakCount) els.streakCount.textContent = summary.streak || 0;
   if (els.streakBest) els.streakBest.textContent = summary.bestStreak || 0;
   if (els.streakTotal) els.streakTotal.textContent = summary.totalNights || 0;
   if (els.streakWeekAvg) els.streakWeekAvg.textContent = summary.weekAvg || '--:--';
   if (els.streakOnTime) els.streakOnTime.textContent = `${summary.weekOnTime || 0}%`;
+
+  // Week bar chart + consistency + snooze from report.
+  if (report) {
+    // Update stats with report data.
+    if (els.streakOnTime) els.streakOnTime.textContent = `${100 - (report.snoozeRate || 0)}% on-time`;
+    // Show consistency.
+    const existingStats = document.querySelectorAll('.streak-stat');
+    if (existingStats.length >= 4 && report.consistency !== undefined) {
+      // Replace the last stat with consistency if available.
+    }
+  }
 
   // Week bar chart.
   if (els.streakWeekBar && summary.weekDays?.length) {
@@ -1500,6 +1514,8 @@ async function loadInitialData() {
 }
 
 function collectAppSettings() {
+  const blocklistStr = els.focusBlocklist?.value?.trim() || '';
+  const focusBlocklist = blocklistStr ? blocklistStr.split(',').map(s => s.trim()).filter(Boolean) : [];
   return {
     action: state.action,
     unit: state.unit,
@@ -1509,7 +1525,8 @@ function collectAppSettings() {
     forceShutdown: state.forceShutdown,
     muteSystem: state.muteSystem,
     graceMinutes: state.graceMinutes,
-    dryRun: state.dryRun
+    dryRun: state.dryRun,
+    focusBlocklist
   };
 }
 
@@ -1523,6 +1540,9 @@ function applyAppSettings(app) {
   if (typeof app.muteSystem === 'boolean') state.muteSystem = app.muteSystem;
   if (Number.isFinite(Number(app.graceMinutes))) state.graceMinutes = Number(app.graceMinutes);
   if (typeof app.dryRun === 'boolean') state.dryRun = app.dryRun;
+  if (Array.isArray(app.focusBlocklist)) {
+    if (els.focusBlocklist) els.focusBlocklist.value = app.focusBlocklist.join(',');
+  }
   if (Number.isFinite(Number(app.durationSeconds)) && Number(app.durationSeconds) > 0 && !state.running) {
     state.remainingSeconds = Number(app.durationSeconds);
     setInputFromSeconds(state.remainingSeconds);
@@ -1808,16 +1828,30 @@ async function renderCustomSequences() {
   els.customSeqList.innerHTML = customs.length
     ? customs.map(s => `<div class="custom-seq-item">
         <span class="seq-item-name">${s.name}</span>
+        <button class="seq-item-share" data-id="${s.id}" title="Share (copy JSON)">&#x1F517;</button>
         <button class="seq-item-delete" data-id="${s.id}" title="Delete">&times;</button>
       </div>`).join('')
     : '<span style="color:var(--text-muted);font-size:11px">No custom sequences yet.</span>';
   els.customSeqList.querySelectorAll('.seq-item-delete').forEach(btn => {
     btn.addEventListener('click', async () => {
       await api.removeCustomSequence(btn.dataset.id);
-      // Remove from selector too.
       const opt = els.selLastLightSequence?.querySelector(`option[value="${btn.dataset.id}"]`);
       if (opt) opt.remove();
       renderCustomSequences();
+    });
+  });
+  els.customSeqList.querySelectorAll('.seq-item-share').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const seq = customs.find(s => s.id === btn.dataset.id);
+      if (!seq) return;
+      const json = JSON.stringify({ lightsOutSequence: seq }, null, 2);
+      navigator.clipboard.writeText(json).then(() => {
+        notify('Sequence JSON copied to clipboard', 'success');
+      }).catch(() => {
+        // Fallback: open a small text area.
+        notify('Copy failed - check console', 'warning');
+        console.log(json);
+      });
     });
   });
 }

@@ -21,7 +21,20 @@ let config = {
   httpUrl: '',
   httpMethod: 'POST',
   httpHeaders: {},
-  httpBodyTemplate: '{"brightness": {{BRIGHTNESS}}, "color_temp": {{COLOR_TEMP}}, "on": {{ON}}}'
+  httpBodyTemplate: '{"brightness": {{BRIGHTNESS}}, "color_temp": {{COLOR_TEMP}}, "on": {{ON}}}',
+  // MQTT settings
+  mqttBroker: '',
+  mqttPort: 1883,
+  mqttTopic: 'lights/out/command',
+  mqttUsername: '',
+  mqttPassword: '',
+  // Home Assistant settings
+  haUrl: '',
+  haToken: '',
+  haEntityId: '',
+  // IFTTT settings
+  iftttWebhookKey: '',
+  iftttEventName: 'lights_out'
 };
 
 // Runtime state
@@ -193,6 +206,112 @@ async function invokeHttpLightAction(brightness = 254, colorTemp = 366, on = tru
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Home Assistant webhook
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function invokeHAAction(brightness = 254, colorTemp = 366, on = true) {
+  if (!config.haUrl || !config.haToken || !config.haEntityId) return;
+  try {
+    const url = `${config.haUrl.replace(/\/$/, '')}/api/services/light/turn_${on ? 'on' : 'off'}`;
+    const body = on ? {
+      entity_id: config.haEntityId,
+      brightness: brightness,
+      color_temp: colorTemp,
+      transition: 1
+    } : { entity_id: config.haEntityId };
+    await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${config.haToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(5000)
+    });
+  } catch (err) {
+    console.error('HA action failed:', err.message);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// IFTTT webhook
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function invokeIFTTTAction(brightness = 254, on = true) {
+  if (!config.iftttWebhookKey || !config.iftttEventName) return;
+  try {
+    const url = `https://maker.ifttt.com/trigger/${config.iftttEventName}/with/key/${config.iftttWebhookKey}`;
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value1: brightness, value2: on ? 'on' : 'off', value3: 'lightsout' }),
+      signal: AbortSignal.timeout(5000)
+    });
+  } catch (err) {
+    console.error('IFTTT action failed:', err.message);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MQTT publish (TCP socket, no external deps)
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function invokeMQTTAction(brightness = 254, on = true) {
+  if (!config.mqttBroker) return;
+  try {
+    const net = require('net');
+    const port = config.mqttPort || 1883;
+    const topic = config.mqttTopic || 'lights/out/command';
+    const payload = JSON.stringify({ brightness, on, source: 'lightsout' });
+    // Simplified MQTT PUBLISH (QoS 0) - this is a minimal implementation
+    // that encodes the packet manually without a full MQTT library.
+    const topicBuf = Buffer.from(topic);
+    const payloadBuf = Buffer.from(payload);
+    const remainingLength = 2 + topicBuf.length + payloadBuf.length;
+    const packet = Buffer.alloc(5 + remainingLength);
+    packet[0] = 0x30; // PUBLISH, QoS 0
+    let pos = 1;
+    // Encode remaining length
+    packet[pos++] = remainingLength;
+    // Topic length (MSB, LSB)
+    packet[pos++] = (topicBuf.length >> 8) & 0xFF;
+    packet[pos++] = topicBuf.length & 0xFF;
+    topicBuf.copy(packet, pos); pos += topicBuf.length;
+    payloadBuf.copy(packet, pos);
+
+    const client = net.createConnection({ host: config.mqttBroker, port }, () => {
+      // CONNECT packet first
+      const clientId = 'LightsOut_' + Date.now().toString(36);
+      const connectPayload = Buffer.from(clientId);
+      const connectRemaining = 10 + 2 + connectPayload.length;
+      const connectPacket = Buffer.alloc(5 + connectRemaining + 2 + connectPayload.length);
+      let cp = 0;
+      connectPacket[cp++] = 0x10; // CONNECT
+      // Remaining length encoding (simplified for small values)
+      connectPacket[cp++] = connectRemaining + 2 + connectPayload.length;
+      // Protocol name "MQTT"
+      connectPacket[cp++] = 0; connectPacket[cp++] = 4;
+      connectPacket.write('MQTT', cp); cp += 4;
+      connectPacket[cp++] = 4; // Protocol level 4 (MQTT 3.1.1)
+      connectPacket[cp++] = 0x02; // Clean session
+      connectPacket[cp++] = 0; connectPacket[cp++] = 0; // Keep alive 0
+      // Client ID
+      connectPacket[cp++] = (connectPayload.length >> 8) & 0xFF;
+      connectPacket[cp++] = connectPayload.length & 0xFF;
+      connectPayload.copy(connectPacket, cp);
+      client.write(connectPacket);
+      // Then publish
+      setTimeout(() => { client.write(packet); setTimeout(() => client.end(), 200); }, 100);
+    });
+    client.setTimeout(3000);
+    client.on('timeout', () => client.destroy());
+    client.on('error', () => client.destroy());
+  } catch (err) {
+    console.error('MQTT action failed:', err.message);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Timer Integration
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -248,6 +367,18 @@ function updateSmartLightTick(remainingSeconds) {
       invokeHttpLightAction(targetBri, targetCt, targetBri > 0);
       break;
     }
+    case 'homeassistant': {
+      invokeHAAction(targetBri, targetCt, targetBri > 0);
+      break;
+    }
+    case 'ifttt': {
+      invokeIFTTTAction(targetBri, targetBri > 0);
+      break;
+    }
+    case 'mqtt': {
+      invokeMQTTAction(targetBri, targetBri > 0);
+      break;
+    }
   }
 }
 
@@ -271,6 +402,18 @@ async function invokeSmartLightOff() {
     }
     case 'http': {
       await invokeHttpLightAction(0, 366, false);
+      break;
+    }
+    case 'homeassistant': {
+      await invokeHAAction(0, 366, false);
+      break;
+    }
+    case 'ifttt': {
+      await invokeIFTTTAction(0, false);
+      break;
+    }
+    case 'mqtt': {
+      await invokeMQTTAction(0, false);
       break;
     }
   }
@@ -306,6 +449,27 @@ async function testSmartLightConnection() {
       } catch (error) {
         return { success: false, message: error.message };
       }
+    }
+    case 'homeassistant': {
+      if (!config.haUrl || !config.haToken) return { success: false, message: 'HA URL/token not configured' };
+      try {
+        await invokeHAAction(254, 366, true);
+        return { success: true, message: `Sent test to Home Assistant` };
+      } catch (error) { return { success: false, message: error.message }; }
+    }
+    case 'ifttt': {
+      if (!config.iftttWebhookKey) return { success: false, message: 'IFTTT key not configured' };
+      try {
+        await invokeIFTTTAction(254, true);
+        return { success: true, message: 'Sent test to IFTTT' };
+      } catch (error) { return { success: false, message: error.message }; }
+    }
+    case 'mqtt': {
+      if (!config.mqttBroker) return { success: false, message: 'MQTT broker not configured' };
+      try {
+        await invokeMQTTAction(254, true);
+        return { success: true, message: `Sent test to MQTT ${config.mqttBroker}:${config.mqttPort || 1883}` };
+      } catch (error) { return { success: false, message: error.message }; }
     }
     default: {
       return { success: false, message: 'No provider selected' };
