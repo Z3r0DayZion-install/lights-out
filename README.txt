@@ -18,6 +18,14 @@ Emergency cancel: Ctrl+Shift+S
 Run at login: creates a startup shortcut that opens Lights Out minimized and idle.
 Agent handoff: read AGENTS.md before making code changes. It explains whether a task belongs to the PowerShell app, the Electron app, or both.
 
+NEW (Electron edition)
+  Customization console - accent color, theme (Midnight/Carbon/Aurora),
+    ring style, window opacity, and sound volume, applied live
+  Stateful settings - all options persist and restore on launch
+  Last Light finale - optional cinematic timer-zero sequence (Settings)
+  Warning dialog - grace-period heads-up with Snooze / Cancel
+  Crash recovery - an interrupted countdown offers Resume / Dismiss on restart
+
 NEW IN 5.3.0
   Safe startup defaults
     • "Lights Out.bat" opens the Steam UI idle by default

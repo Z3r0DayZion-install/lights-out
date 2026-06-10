@@ -44,6 +44,11 @@ const DEFAULTS = {
     opacity: 1,
     volume: 1
   },
+  lastLight: {
+    enabled: false,
+    sequence: 'ClassicFade',
+    sound: 'Off'
+  },
   // Persisted running-timer snapshot for crash/quit recovery. null when idle.
   activeTimer: null
 };

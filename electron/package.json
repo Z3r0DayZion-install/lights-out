@@ -28,6 +28,7 @@
       "profiles.js",
       "calendar.js",
       "settings.js",
+      "lastLight.js",
       "assets/**"
     ],
     "win": {

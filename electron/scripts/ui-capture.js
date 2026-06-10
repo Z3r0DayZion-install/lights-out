@@ -53,6 +53,24 @@ app.whenReady().then(async () => {
   await wait(500);
   await capture(win, '_ui_themed.png');
 
+  // Warning modal.
+  await win.webContents.executeJavaScript(`
+    (function(){ if (typeof showWarningModal === 'function') showWarningModal('Shutdown in 2 minutes'); return true; })();
+  `);
+  await wait(500);
+  await capture(win, '_ui_warning.png');
+
+  // Last Light finale mid-sequence.
+  await win.webContents.executeJavaScript(`
+    (function(){
+      if (typeof hideWarningModal === 'function') hideWarningModal();
+      if (typeof playLastLight === 'function') playLastLight({ sequence: 'ExitTheGrid', sound: 'Off', dryRun: false });
+      return true;
+    })();
+  `);
+  await wait(1900);
+  await capture(win, '_ui_lastlight.png');
+
   app.quit();
 }).catch(err => {
   console.error(err);

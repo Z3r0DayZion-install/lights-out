@@ -50,7 +50,7 @@ Use these rules to avoid changing the wrong layer.
 - If the user is talking about the cockpit UI, Electron menus, Electron tray behavior, or the packaged `dist\LightsOut.exe`:
   work in `electron\main.js`, `electron\renderer.js`, `electron\preload.js`, `electron\index.html`, and `electron\styles.css`.
 
-- `source\SleepTimer-Backend.ps1` is deprecated. The Electron app uses `main.js` as the timer authority.
+- `source\SleepTimer-Backend.ps1` was removed (deprecated). The Electron app uses `main.js` as the timer authority.
   PowerShell is still used for ad-hoc system calls (battery, power plans, shutdown commands).
 
 ## Safe Defaults
@@ -112,15 +112,15 @@ These are the most useful follow-on projects for an agent.
    - ✅ Smart lights (Philips Hue / HTTP webhook) - COMPLETE in v5.3.0+
    - ✅ Saved profiles - COMPLETE in v5.3.0+
    - ✅ Calendar scheduling (.ics import) - COMPLETE in v5.3.0+
-   - Last Light ritual
-   - Richer warning dialogs
+   - ✅ Last Light ritual - COMPLETE (electron/lastLight.js + renderer overlay)
+   - ✅ Richer warning dialogs - COMPLETE (imminent-action warning modal)
 
 2. Add repeatable smoke checks.
    At minimum, keep a quick path to verify:
    start, pause, resume, snooze, cancel, mini mode, tray hide/show, and login-startup wording.
 
 3. Archive or remove deprecated code.
-   `SleepTimer-Backend.ps1` is no longer used. Consider removing it to reduce confusion.
+   ✅ `SleepTimer-Backend.ps1` removed.
 
 ## Verification Checklist
 

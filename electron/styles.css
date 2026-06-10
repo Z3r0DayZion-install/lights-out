@@ -1629,13 +1629,15 @@ body.mini-mode .action-btn {
   opacity: var(--app-opacity, 1);
 }
 
-.customize-section {
+.customize-section,
+.lastlight-section {
   margin-top: 16px;
   padding-top: 16px;
   border-top: 1px solid var(--border-color);
 }
 
-.customize-section h3 {
+.customize-section h3,
+.lastlight-section h3 {
   font-size: 13px;
   color: var(--text-secondary);
   margin-bottom: 12px;
@@ -1658,11 +1660,17 @@ body.mini-mode .action-btn {
   accent-color: var(--accent, var(--accent-cyan));
 }
 
+.customize-section .option-group {
+  flex-wrap: wrap;
+}
+
 .swatches {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   flex-wrap: wrap;
-  margin-left: 8px;
+  flex-basis: 100%;
+  margin-top: 10px;
+  margin-bottom: 4px;
 }
 
 .swatch {
@@ -1759,4 +1767,130 @@ body[data-theme="aurora"] {
 .recovery-btn.dismiss {
   background: var(--bg-hover);
   color: var(--text-secondary);
+}
+
+/* ───────────── Last Light finale ───────────── */
+.last-light-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 45%, rgba(10, 14, 28, 0.92), rgba(0, 0, 0, 0.98));
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.6s ease;
+}
+
+.last-light-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.ll-stage {
+  text-align: center;
+  padding: 24px;
+  max-width: 92%;
+}
+
+.ll-title {
+  font-size: 13px;
+  letter-spacing: 0.5em;
+  color: var(--accent, var(--accent-cyan));
+  text-transform: uppercase;
+  margin-bottom: 28px;
+  text-shadow: 0 0 16px var(--accent-glow, rgba(118, 201, 255, 0.6));
+}
+
+.ll-headline {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--text-primary);
+  text-transform: uppercase;
+  min-height: 24px;
+  margin-bottom: 14px;
+}
+
+.ll-line {
+  font-size: 24px;
+  font-weight: 300;
+  color: var(--text-secondary);
+  min-height: 32px;
+  animation: ll-fade 0.5s ease;
+}
+
+.ll-stamp {
+  margin-top: 30px;
+  font-size: 14px;
+  letter-spacing: 0.4em;
+  font-weight: 700;
+  color: var(--accent, var(--accent-cyan));
+  text-transform: uppercase;
+  min-height: 18px;
+}
+
+@keyframes ll-fade {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ───────────── Imminent-action warning modal ───────────── */
+.warning-modal {
+  z-index: 1500;
+}
+
+.warning-modal-content {
+  text-align: center;
+  max-width: 360px;
+  padding: 28px 24px;
+  border: 1px solid var(--accent-amber);
+  box-shadow: 0 0 32px rgba(212, 165, 10, 0.25);
+}
+
+.warning-modal-icon {
+  font-size: 40px;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+
+.warning-modal-content h2 {
+  font-size: 18px;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+#warning-modal-text {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-bottom: 22px;
+}
+
+.warning-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.warning-modal-actions button {
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 13px;
+}
+
+.btn-danger {
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: var(--accent-red);
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #e63939;
 }

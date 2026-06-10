@@ -22,6 +22,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   closeWindow: () => ipcRenderer.send('close-window'),
   quitApp: () => ipcRenderer.send('quit-app'),
   toggleMiniMode: () => ipcRenderer.send('toggle-mini-mode'),
+  setWindowOpacity: (value) => ipcRenderer.send('set-window-opacity', value),
   
   // Notifications & sounds
   showNotification: (title, body) => ipcRenderer.send('show-notification', title, body),
@@ -41,6 +42,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Sound playback from main
   onPlaySound: (callback) => {
     ipcRenderer.on('play-sound', (event, soundType) => callback(soundType));
+  },
+
+  // Last Light finale trigger from main
+  onPlayLastLight: (callback) => {
+    ipcRenderer.on('play-last-light', (event, payload) => callback(payload));
   },
   
   // External links

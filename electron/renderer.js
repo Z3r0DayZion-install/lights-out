@@ -115,12 +115,14 @@ const fallbackApi = (() => {
     closeWindow: () => {},
     quitApp: () => {},
     toggleMiniMode: () => {},
+    setWindowOpacity: () => {},
     showNotification: () => {},
     playSound: () => {},
     setProgress: () => {},
     onTimerUpdate: callback => listeners.add(callback),
     onMiniModeChanged: () => {},
     onPlaySound: () => {},
+    onPlayLastLight: () => {},
     openExternal: url => window.open(url, '_blank', 'noopener'),
     // Profiles fallbacks
     getAllProfiles: async () => [],
@@ -232,7 +234,24 @@ const els = {
   czOpacityVal: document.getElementById('cz-opacity-val'),
   czVolume: document.getElementById('cz-volume'),
   czVolumeVal: document.getElementById('cz-volume-val'),
-  btnResetCustomize: document.getElementById('btn-reset-customize')
+  btnResetCustomize: document.getElementById('btn-reset-customize'),
+  // Last Light elements
+  chkLastLight: document.getElementById('chk-lastlight'),
+  lastLightConfig: document.getElementById('lastlight-config'),
+  selLastLightSequence: document.getElementById('sel-lastlight-sequence'),
+  selLastLightSound: document.getElementById('sel-lastlight-sound'),
+  btnPreviewLastLight: document.getElementById('btn-preview-lastlight'),
+  lastLightOverlay: document.getElementById('last-light-overlay'),
+  llTitle: document.getElementById('ll-title'),
+  llHeadline: document.getElementById('ll-headline'),
+  llLine: document.getElementById('ll-line'),
+  llStamp: document.getElementById('ll-stamp'),
+  // Warning modal
+  warningModal: document.getElementById('warning-modal'),
+  warningModalText: document.getElementById('warning-modal-text'),
+  warningSnooze: document.getElementById('warning-snooze'),
+  warningCancel: document.getElementById('warning-cancel'),
+  warningDismiss: document.getElementById('warning-dismiss')
 };
 
 const state = {
@@ -272,6 +291,12 @@ const state = {
     ringStyle: 'glow',
     opacity: 1,
     volume: 1
+  },
+  // Last Light state
+  lastLight: {
+    enabled: false,
+    sequence: 'ClassicFade',
+    sound: 'Off'
   },
   // Profiles state
   profiles: [],
@@ -605,18 +630,21 @@ function applyTimerPayload(data) {
     state.totalSeconds = state.remainingSeconds;
     state.endsAt = null;
     SoundSystem.playComplete();
+    hideWarningModal();
     api.showNotification('Lights Out', state.dryRun ? 'Dry run complete.' : `${actionLabel()} started.`);
     notify(data.message || 'Timer complete', 'success', 5000);
   } else if (data.type === 'cancelled') {
     state.running = false;
     state.paused = false;
     state.endsAt = null;
+    hideWarningModal();
   } else if (data.type === 'warning') {
     SoundSystem.playWarning();
     if (data.message) {
       els.warningCard.style.display = '';
       els.warningText.textContent = data.message;
       api.showNotification('Lights Out', data.message);
+      showWarningModal(data.message);
     }
   } else if (data.type === 'tick' && state.remainingSeconds <= 10 && state.remainingSeconds > 0) {
     SoundSystem.playTone(800, 0.04, 'sine', 0.08);
@@ -720,6 +748,7 @@ function wireEvents() {
 
       if (item.id === 'open-options') {
         syncCustomizeUI();
+        updateLastLightUIFromState();
         els.optionsModal.classList.add('active');
         return;
       }
@@ -781,11 +810,18 @@ function wireEvents() {
       httpBodyTemplate: els.httpTemplate?.value || '{"brightness": {{BRIGHTNESS}}, "color_temp": {{COLOR_TEMP}}, "on": {{ON}}}'
     };
 
+    state.lastLight = {
+      enabled: els.chkLastLight?.checked || false,
+      sequence: els.selLastLightSequence?.value || 'ClassicFade',
+      sound: els.selLastLightSound?.value || 'Off'
+    };
+
     try {
       const saved = await api.saveAppSettings({
         runAtLogin: state.runAtLogin,
         app: collectAppSettings(),
-        customization: state.customization
+        customization: state.customization,
+        lastLight: state.lastLight
       });
       if (typeof saved?.runAtLogin === 'boolean') state.runAtLogin = saved.runAtLogin;
     } catch (error) {
@@ -1101,6 +1137,12 @@ async function loadInitialData() {
     }
     applyCustomization(state.customization);
 
+    // Rehydrate Last Light config
+    if (appSettings.lastLight) {
+      state.lastLight = { ...state.lastLight, ...appSettings.lastLight };
+    }
+    updateLastLightUIFromState();
+
     // Offer recovery of an interrupted timer
     if (appSettings.recoverableTimer) {
       promptTimerRecovery(appSettings.recoverableTimer);
@@ -1172,7 +1214,12 @@ function applyCustomization(c) {
   if (c.theme) document.body.dataset.theme = c.theme;
   if (c.ringStyle) document.body.dataset.ring = c.ringStyle;
   if (Number.isFinite(Number(c.opacity))) {
-    root.style.setProperty('--app-opacity', clamp(Number(c.opacity), 0.5, 1));
+    const op = clamp(Number(c.opacity), 0.5, 1);
+    if (previewMode) {
+      root.style.setProperty('--app-opacity', op);
+    } else {
+      api.setWindowOpacity(op);
+    }
   }
   if (Number.isFinite(Number(c.volume))) {
     SoundSystem.master = clamp(Number(c.volume), 0, 1);
@@ -1239,6 +1286,95 @@ function setupCustomizeHandlers() {
     applyCustomization(state.customization);
     syncCustomizeUI();
   });
+}
+
+function showWarningModal(message) {
+  if (!els.warningModal) return;
+  if (els.warningModalText) els.warningModalText.textContent = message;
+  els.warningModal.classList.add('active');
+}
+
+function hideWarningModal() {
+  els.warningModal?.classList.remove('active');
+}
+
+function setupWarningHandlers() {
+  els.warningSnooze?.addEventListener('click', () => {
+    snooze(5 * 60);
+    hideWarningModal();
+  });
+  els.warningCancel?.addEventListener('click', () => {
+    cancelTimer();
+    hideWarningModal();
+  });
+  els.warningDismiss?.addEventListener('click', hideWarningModal);
+  els.warningModal?.addEventListener('click', event => {
+    if (event.target === els.warningModal) hideWarningModal();
+  });
+}
+
+function updateLastLightUIFromState() {
+  if (els.chkLastLight) els.chkLastLight.checked = state.lastLight.enabled;
+  if (els.selLastLightSequence) els.selLastLightSequence.value = state.lastLight.sequence;
+  if (els.selLastLightSound) els.selLastLightSound.value = state.lastLight.sound;
+  if (els.lastLightConfig) els.lastLightConfig.style.display = state.lastLight.enabled ? 'block' : 'none';
+}
+
+function setupLastLightHandlers() {
+  els.chkLastLight?.addEventListener('change', () => {
+    if (els.lastLightConfig) els.lastLightConfig.style.display = els.chkLastLight.checked ? 'block' : 'none';
+  });
+  els.btnPreviewLastLight?.addEventListener('click', () => {
+    playLastLight({
+      sequence: els.selLastLightSequence?.value || 'ClassicFade',
+      sound: els.selLastLightSound?.value || 'Off',
+      dryRun: true
+    });
+  });
+}
+
+let lastLightTimers = [];
+
+function clearLastLightTimers() {
+  lastLightTimers.forEach(t => clearTimeout(t));
+  lastLightTimers = [];
+}
+
+function playLastLight(payload) {
+  const LL = (typeof window !== 'undefined' && window.LastLight) ? window.LastLight : null;
+  if (!LL || !els.lastLightOverlay) return;
+
+  const sequence = LL.normalizeId(payload && payload.sequence);
+  const dryRun = Boolean(payload && payload.dryRun);
+  const soundMode = LL.normalizeSoundId(payload && payload.sound);
+  const steps = LL.getSteps(sequence, dryRun);
+  const meta = LL.getMeta(sequence, dryRun);
+
+  clearLastLightTimers();
+  els.llTitle.textContent = meta.sequenceLabel || meta.cinematicTitle;
+  els.lastLightOverlay.classList.add('active');
+  els.lastLightOverlay.setAttribute('aria-hidden', 'false');
+
+  let elapsed = 0;
+  steps.forEach(step => {
+    lastLightTimers.push(setTimeout(() => {
+      els.llHeadline.textContent = step.headline || '';
+      els.llLine.textContent = step.line || '';
+      els.llStamp.textContent = '';
+      if (soundMode === 'Soft') SoundSystem.playTone(660, 0.05, 'sine', 0.12);
+    }, elapsed));
+    elapsed += Number(step.dwellMs || 0);
+  });
+
+  // Final stamp, then fade out.
+  lastLightTimers.push(setTimeout(() => {
+    els.llStamp.textContent = meta.stampLine || '';
+  }, Math.max(0, elapsed - 600)));
+
+  lastLightTimers.push(setTimeout(() => {
+    els.lastLightOverlay.classList.remove('active');
+    els.lastLightOverlay.setAttribute('aria-hidden', 'true');
+  }, elapsed + 250));
 }
 
 function promptTimerRecovery(snapshot) {
@@ -1719,8 +1855,11 @@ api.onMiniModeChanged(isMini => {
 api.onPlaySound(soundType => {
   if (SoundSystem[soundType]) SoundSystem[soundType]();
 });
+api.onPlayLastLight(payload => playLastLight(payload));
 
 wireEvents();
 setupCustomizeHandlers();
+setupLastLightHandlers();
+setupWarningHandlers();
 setAction(state.action);
 loadInitialData().finally(render);

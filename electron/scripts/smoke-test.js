@@ -30,7 +30,7 @@ function assert(cond, msg) {
 }
 
 // 1. Syntax-check every first-party JS file.
-const jsFiles = ['main.js', 'preload.js', 'renderer.js', 'settings.js', 'smartLights.js', 'profiles.js', 'calendar.js'];
+const jsFiles = ['main.js', 'preload.js', 'renderer.js', 'settings.js', 'smartLights.js', 'profiles.js', 'calendar.js', 'lastLight.js'];
 for (const file of jsFiles) {
   check(`syntax: ${file}`, () => {
     execFileSync(process.execPath, ['--check', path.join(root, file)], { stdio: 'pipe' });
@@ -83,7 +83,24 @@ check('smartLights: loadConfig/getConfig round-trip', () => {
   assert(cfg.enabled === true && cfg.provider === 'hue' && cfg.dimMinutes === 7, 'config not applied');
 });
 
+check('settings: lastLight defaults present', () => {
+  const settings = require(path.join(root, 'settings.js'));
+  const ll = settings.getSection('lastLight');
+  assert(ll && ll.sequence === 'ClassicFade' && ll.enabled === false, 'lastLight defaults wrong');
+});
+
 Module._load = origLoad;
+
+// 4b. lastLight sequence catalog + timing.
+check('lastLight: catalog, steps, and duration', () => {
+  const ll = require(path.join(root, 'lastLight.js'));
+  assert(ll.getCatalog().length === 4, 'expected 4 sequences');
+  assert(ll.normalizeId('exit_the grid') === 'ExitTheGrid', 'normalizeId failed');
+  assert(ll.getSteps('ExitTheGrid', false).length >= 4, 'missing steps');
+  const full = ll.getDurationMs('ExitTheGrid', false);
+  const dry = ll.getDurationMs('ExitTheGrid', true);
+  assert(full > 0 && dry > 0 && dry < full, 'dry-run should be shorter');
+});
 
 // 5. Icon validity.
 check('icon: assets/icon.ico is a valid multi-size ICO', () => {
@@ -107,7 +124,7 @@ check('startup: no default force-shutdown auto-start', () => {
 
 // 7. Core UI controls exist (start/pause/resume/snooze/cancel/mini + customize).
 const htmlSrc = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-for (const id of ['btn-start', 'btn-stop', 'btn-pause', 'btn-snooze', 'btn-mini', 'cz-accent', 'cz-theme', 'cz-ring', 'cz-opacity', 'cz-volume']) {
+for (const id of ['btn-start', 'btn-stop', 'btn-pause', 'btn-snooze', 'btn-mini', 'cz-accent', 'cz-theme', 'cz-ring', 'cz-opacity', 'cz-volume', 'chk-lastlight', 'sel-lastlight-sequence', 'warning-modal', 'last-light-overlay']) {
   check(`ui: #${id} present`, () => {
     assert(htmlSrc.includes(`id="${id}"`), `missing #${id}`);
   });

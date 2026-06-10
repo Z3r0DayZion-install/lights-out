@@ -5,6 +5,7 @@ const smartLights = require('./smartLights');
 const profiles = require('./profiles');
 const calendar = require('./calendar');
 const settingsStore = require('./settings');
+const lastLight = require('./lastLight');
 
 const APP_ICON = path.join(__dirname, 'assets', 'icon.ico');
 
@@ -413,7 +414,23 @@ async function completeTimer() {
   showNativeNotification('Lights Out', timerState.dryRun
     ? `Dry run complete: ${formatAction(timerState.action)} skipped.`
     : `Timer complete: ${formatAction(timerState.action)} now.`);
+
+  await playLastLightRitual(timerState.dryRun);
   await executePowerAction({ ...timerState });
+}
+
+// Plays the Last Light finale in the renderer before the power action fires.
+// Only delays when enabled and the window is visible, so a hidden/idle app
+// never holds up the shutdown.
+function playLastLightRitual(dryRun) {
+  const cfg = settingsStore.getSection('lastLight') || {};
+  if (!cfg.enabled) return Promise.resolve();
+  if (!mainWindow || mainWindow.isDestroyed() || !mainWindow.isVisible()) return Promise.resolve();
+
+  const sequence = lastLight.normalizeId(cfg.sequence);
+  const durationMs = lastLight.getDurationMs(sequence, Boolean(dryRun));
+  mainWindow.webContents.send('play-last-light', { sequence, dryRun: Boolean(dryRun), sound: cfg.sound });
+  return new Promise(resolve => setTimeout(resolve, durationMs + 300));
 }
 
 function formatAction(action) {
@@ -527,30 +544,48 @@ ipcMain.handle('resume-timer', async () => resumeTimer());
 ipcMain.handle('snooze-timer', async (event, seconds) => snoozeTimer(seconds));
 ipcMain.handle('execute-action', async (event, action, options = {}) => executePowerAction({ ...options, action }));
 
+let systemInfoCache = null;
+let systemInfoCachedAt = 0;
+const SYSTEM_INFO_TTL_MS = 15000;
+
 ipcMain.handle('get-system-info', async () => {
+  if (systemInfoCache && Date.now() - systemInfoCachedAt < SYSTEM_INFO_TTL_MS) {
+    return systemInfoCache;
+  }
   try {
     const battery = await executePowerShell('(Get-CimInstance Win32_Battery -ErrorAction SilentlyContinue).EstimatedChargeRemaining');
     const powerPlan = await executePowerShell('(Get-CimInstance -Namespace "root\\cimv2\\power" -ClassName Win32_PowerPlan | Where-Object { $_.IsActive }).ElementName');
-    return { battery: battery || 'N/A', powerPlan: powerPlan || 'Unknown' };
+    systemInfoCache = { battery: battery || 'N/A', powerPlan: powerPlan || 'Unknown' };
+    systemInfoCachedAt = Date.now();
+    return systemInfoCache;
   } catch {
     return { battery: 'N/A', powerPlan: 'Unknown' };
   }
+});
+
+ipcMain.on('set-window-opacity', (event, value) => {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const v = Math.max(0.5, Math.min(1, Number(value) || 1));
+  mainWindow.setOpacity(v);
 });
 
 ipcMain.handle('get-app-settings', async () => ({
   ...getLoginSettings(),
   app: settingsStore.getSection('app'),
   customization: settingsStore.getSection('customization'),
+  lastLight: settingsStore.getSection('lastLight'),
   recoverableTimer: getRecoverableTimer()
 }));
 ipcMain.handle('save-app-settings', async (event, settings = {}) => {
   if (typeof settings.runAtLogin === 'boolean') setRunAtLogin(settings.runAtLogin);
   if (settings.app) settingsStore.updateSection('app', settings.app);
   if (settings.customization) settingsStore.updateSection('customization', settings.customization);
+  if (settings.lastLight) settingsStore.updateSection('lastLight', settings.lastLight);
   return {
     ...getLoginSettings(),
     app: settingsStore.getSection('app'),
-    customization: settingsStore.getSection('customization')
+    customization: settingsStore.getSection('customization'),
+    lastLight: settingsStore.getSection('lastLight')
   };
 });
 ipcMain.handle('discard-recoverable-timer', async () => {
