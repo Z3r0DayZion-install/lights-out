@@ -1,0 +1,37 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="ic-grad" x1="56" y1="48" x2="200" y2="208" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7dd3fc"/>
+      <stop offset="0.5" stop-color="#5b8cff"/>
+      <stop offset="1" stop-color="#a855f7"/>
+    </linearGradient>
+    <radialGradient id="ic-bg" cx="0.35" cy="0.28" r="0.9">
+      <stop offset="0" stop-color="#1b2440"/>
+      <stop offset="1" stop-color="#080b16"/>
+    </radialGradient>
+    <filter id="ic-glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Rounded badge -->
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="url(#ic-bg)"/>
+  <rect x="8.5" y="8.5" width="239" height="239" rx="55.5" fill="none"
+        stroke="#5b8cff" stroke-opacity="0.35" stroke-width="1.5"/>
+
+  <!-- Glow halo behind glyph -->
+  <circle cx="128" cy="132" r="74" fill="#5b8cff" opacity="0.10"/>
+
+  <g filter="url(#ic-glow)">
+    <!-- Open power ring (gap at top) -->
+    <path d="M90 86 a54 54 0 1 0 76 0"
+          stroke="url(#ic-grad)" stroke-width="18" stroke-linecap="round" fill="none"/>
+    <!-- Power line notch -->
+    <line x1="128" y1="66" x2="128" y2="120"
+          stroke="url(#ic-grad)" stroke-width="18" stroke-linecap="round"/>
+  </g>
+</svg>

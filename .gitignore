@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+out/
+
+# Large prebuilt binaries (rebuilt from source)
+*.exe
+
+# Backups / reference material (not source)
+archive/
+system-tune-backup-*/
+*.bak
+
+# Dev capture artifacts
+electron/assets/_ui_*.png
+
+# OS / editor cruft
+Thumbs.db
+.DS_Store

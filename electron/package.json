@@ -1,0 +1,64 @@
+{
+  "name": "lights-out-electron",
+  "version": "5.3.0",
+  "description": "Lights Out - Sleep Timer (Electron Edition)",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "dist": "electron-builder --win",
+    "icons": "node scripts/make-icons.js",
+    "smoke": "node scripts/smoke-test.js"
+  },
+  "author": "Lights Out",
+  "license": "MIT",
+  "build": {
+    "appId": "com.lightsout.sleep-timer",
+    "productName": "Lights Out",
+    "directories": {
+      "output": "../dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "styles.css",
+      "renderer.js",
+      "smartLights.js",
+      "profiles.js",
+      "calendar.js",
+      "settings.js",
+      "assets/**"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        },
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/icon.ico",
+      "publisherName": "Lights Out"
+    },
+    "portable": {
+      "artifactName": "LightsOut.exe"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Lights Out"
+    }
+  },
+  "devDependencies": {
+    "electron": "^30.0.0",
+    "electron-builder": "^24.0.0",
+    "png-to-ico": "^3.0.1",
+    "sharp": "^0.34.5"
+  }
+}

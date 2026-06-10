@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lights Out</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Main Cockpit Container -->
+  <div class="cockpit">
+    
+    <!-- Header with native window controls -->
+    <header class="chrome-header">
+      <div class="window-controls">
+        <div class="app-title">
+          <img class="brand-mark" src="assets/logo.svg" alt="" draggable="false">
+          <span>Lights Out</span>
+        </div>
+      </div>
+      <nav class="main-menu">
+        <div class="menu-item" id="menu-power">
+          <span>Power</span>
+          <div class="submenu">
+            <div class="submenu-item" data-action="shutdown">
+              <span class="icon">&#x23FB;</span>
+              <span>Shutdown</span>
+            </div>
+            <div class="submenu-item" data-action="restart">
+              <span class="icon">&#x21BB;</span>
+              <span>Restart</span>
+            </div>
+            <div class="submenu-item" data-action="sleep">
+              <span class="icon">&#x263E;</span>
+              <span>Sleep</span>
+            </div>
+            <div class="submenu-item" data-action="hibernate">
+              <span class="icon">&#x2744;</span>
+              <span>Hibernate</span>
+            </div>
+          </div>
+        </div>
+        <div class="menu-item" id="menu-presets">
+          <span>Presets</span>
+          <div class="submenu">
+            <div class="submenu-item" data-minutes="5">5 Minutes</div>
+            <div class="submenu-item" data-minutes="10">10 Minutes</div>
+            <div class="submenu-item" data-minutes="15">15 Minutes</div>
+            <div class="submenu-item" data-minutes="30">30 Minutes</div>
+            <div class="submenu-item" data-minutes="45">45 Minutes</div>
+            <div class="submenu-item" data-minutes="60">1 Hour</div>
+          </div>
+        </div>
+        <div class="menu-item" id="menu-settings">
+          <span>Settings</span>
+          <div class="submenu">
+            <div class="submenu-item toggle" id="toggle-dryrun">
+              <span>Dry Run Mode</span>
+              <span class="toggle-indicator">OFF</span>
+            </div>
+            <div class="submenu-item toggle" id="toggle-mute">
+              <span>Sound Effects</span>
+              <span class="toggle-indicator">ON</span>
+            </div>
+            <div class="submenu-item toggle" id="toggle-graceful">
+              <span>Graceful Close</span>
+              <span class="toggle-indicator">ON</span>
+            </div>
+            <div class="submenu-item" id="open-options">
+              <span>Advanced Options...</span>
+            </div>
+          </div>
+        </div>
+        <div class="menu-item" id="menu-help">
+          <span>Help</span>
+          <div class="submenu">
+            <div class="submenu-item" data-help="Use presets for quick starts, Options for launch behavior, and the tray menu for pause, snooze, or cancel.">
+              <span class="icon">&#x2139;</span>
+              <span>Documentation</span>
+            </div>
+            <div class="submenu-item" data-help="Space starts or pauses. Escape cancels. Ctrl+M toggles mini mode. Number keys 1-6 start quick presets.">
+              <span class="icon">&#x2328;</span>
+              <span>Keyboard Shortcuts</span>
+            </div>
+            <div class="submenu-item" data-help="Lights Out Electron v5.3.0. Startup login mode opens minimized and idle.">
+              <span class="icon">&#x24D8;</span>
+              <span>About Lights Out</span>
+            </div>
+          </div>
+        </div>
+      </nav>
+      <div class="window-buttons">
+        <button class="win-btn mini" id="btn-mini" title="Mini Mode">
+          <span>&#x25A3;</span>
+        </button>
+        <button class="win-btn minimize" id="btn-minimize" title="Minimize">
+          <span>&#x2014;</span>
+        </button>
+        <button class="win-btn close" id="btn-close" title="Close to Tray">
+          <span>&#x2715;</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Dashboard -->
+    <main class="dashboard">
+      
+      <!-- Timer Ring Section -->
+      <section class="timer-section">
+        <div class="ring-container">
+          <svg class="timer-ring" viewBox="0 0 200 200">
+            <circle class="ring-bg" cx="100" cy="100" r="90"/>
+            <circle class="ring-progress" cx="100" cy="100" r="90"/>
+          </svg>
+          <div class="timer-display">
+            <div class="time-main" id="timer-main">28:20</div>
+            <div class="time-label" id="timer-label">until shutdown</div>
+          </div>
+        </div>
+        
+        <!-- Quick Action Bar -->
+        <div class="action-bar">
+          <button class="action-btn secondary" id="btn-pause">
+            <span class="icon">&#x23F8;</span>
+            <span>Pause</span>
+          </button>
+          <button class="action-btn secondary" id="btn-snooze">
+            <span class="icon">&#x23F9;</span>
+            <span>Snooze</span>
+          </button>
+          <button class="action-btn danger" id="btn-stop">
+            <span class="icon">&#x25A0;</span>
+            <span>Cancel</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Manual Input Section -->
+      <section class="input-section">
+        <div class="input-group">
+          <label>Timer Amount</label>
+          <div class="number-input">
+            <button class="num-btn" id="btn-minus">&#x2212;</button>
+            <input type="number" id="timer-input" value="28" min="1" max="480">
+            <button class="num-btn" id="btn-plus">+</button>
+          </div>
+          <div class="unit-selector">
+            <button class="unit-btn active" data-unit="min">min</button>
+            <button class="unit-btn" data-unit="sec">sec</button>
+          </div>
+        </div>
+        
+        <button class="start-btn" id="btn-start">
+          <span class="icon">&#x25B6;</span>
+          <span>START</span>
+        </button>
+      </section>
+
+      <!-- Preset Chips -->
+      <section class="presets-section">
+        <div class="chips-row">
+          <button class="chip" data-min="5">5m</button>
+          <button class="chip" data-min="10">10m</button>
+          <button class="chip" data-min="15">15m</button>
+          <button class="chip" data-min="30">30m</button>
+          <button class="chip" data-min="60">1h</button>
+          <button class="chip" data-min="120">2h</button>
+        </div>
+      </section>
+
+      <!-- Saved Profiles -->
+      <section class="profiles-section">
+        <div class="profiles-header">
+          <span class="profiles-title">Saved Profiles</span>
+          <button class="btn-icon" id="btn-manage-profiles" title="Manage Profiles">&#x2699;</button>
+        </div>
+        <div class="profiles-grid" id="profiles-grid">
+          <!-- Profiles loaded dynamically -->
+        </div>
+      </section>
+
+      <!-- Status Cards -->
+      <section class="status-section">
+        <div class="status-card">
+          <div class="card-header">
+            <span class="icon">&#x23FB;</span>
+            <span>Session</span>
+          </div>
+          <div class="card-body">
+            <div class="status-row">
+              <span>Action</span>
+              <span id="action-name">Shutdown</span>
+            </div>
+            <div class="status-row">
+              <span>Ends</span>
+              <span id="end-time">Idle</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="status-card">
+          <div class="card-header">
+            <span class="icon">&#x26A1;</span>
+            <span>Power Status</span>
+          </div>
+          <div class="card-body">
+            <div class="status-row">
+              <span>Battery</span>
+              <span id="battery-level">85%</span>
+            </div>
+            <div class="status-row">
+              <span>Power Plan</span>
+              <span id="power-plan">Balanced</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="status-card warning" id="warning-card" style="display: none;">
+          <div class="card-header">
+            <span class="icon">&#x26A0;</span>
+            <span>Warnings</span>
+          </div>
+          <div class="card-body">
+            <p id="warning-text">Apps may prevent shutdown</p>
+            <button class="link-btn">View Ledger</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tabs Section -->
+      <section class="tabs-section">
+        <div class="tabs-header">
+          <button class="tab-btn active" data-tab="library">Library</button>
+          <button class="tab-btn" data-tab="schedule">Schedule</button>
+          <button class="tab-btn" data-tab="clock">Clock</button>
+          <button class="tab-btn" data-tab="countdown">Countdown</button>
+        </div>
+        <div class="tabs-content">
+          <div class="tab-panel active" id="tab-library">
+            <div class="tonight-grid">
+              <div class="tonight-card" data-card="witchcraft" data-minutes="45" data-action="sleep" data-force="false">
+                <div class="card-title">WITCHCRAFT</div>
+                <div class="card-sub">45 min sleep timer</div>
+              </div>
+              <div class="tonight-card" data-card="money" data-minutes="30" data-action="sleep" data-force="false">
+                <div class="card-title">MONEY</div>
+                <div class="card-sub">Cinema & chill</div>
+              </div>
+              <div class="tonight-card" data-card="hard-stop" data-minutes="15" data-action="shutdown" data-force="true">
+                <div class="card-title">HARD STOP</div>
+                <div class="card-sub">Force shutdown</div>
+              </div>
+              <div class="tonight-card" data-card="beastmode" data-minutes="120" data-action="shutdown" data-force="false">
+                <div class="card-title">BEASTMODE</div>
+                <div class="card-sub">2 hour limit</div>
+              </div>
+            </div>
+          </div>
+          <div class="tab-panel" id="tab-schedule">
+            <div class="schedule-controls">
+              <label>
+                <input type="checkbox" id="chk-schedule">
+                Enable scheduled shutdown
+              </label>
+              <input type="time" id="schedule-time" value="22:30">
+            </div>
+
+            <!-- Calendar Import Section -->
+            <div class="calendar-section">
+              <div class="calendar-header">
+                <span class="icon">&#x1F4C5;</span>
+                <span>Calendar Import</span>
+              </div>
+              <div class="calendar-import">
+                <div class="import-tabs">
+                  <button class="import-tab-btn active" data-import-tab="file">File</button>
+                  <button class="import-tab-btn" data-import-tab="url">URL</button>
+                </div>
+                <div class="import-panel active" id="import-file-panel">
+                  <input type="file" id="calendar-file-input" accept=".ics" style="display: none;">
+                  <button class="btn-secondary" id="btn-import-file">Select .ics File</button>
+                  <small>Import from Google, Outlook, or Apple Calendar</small>
+                </div>
+                <div class="import-panel" id="import-url-panel">
+                  <input type="url" id="calendar-url-input" placeholder="https://calendar.google.com/calendar/ical/...">
+                  <button class="btn-secondary" id="btn-import-url">Fetch Calendar</button>
+                  <small>Paste your calendar's secret iCal URL</small>
+                </div>
+              </div>
+              <div class="calendar-events" id="calendar-events">
+                <!-- Events loaded dynamically -->
+              </div>
+            </div>
+          </div>
+          <div class="tab-panel" id="tab-clock">
+            <div class="clock-presets">
+              <button class="clock-btn" data-time="22:30">10:30 PM</button>
+              <button class="clock-btn" data-time="23:00">11:00 PM</button>
+              <button class="clock-btn" data-time="00:00">12:00 AM</button>
+            </div>
+          </div>
+          <div class="tab-panel" id="tab-countdown">
+            <div class="countdown-presets">
+              <button class="cd-btn" data-hours="1">1 Hour</button>
+              <button class="cd-btn" data-hours="2">2 Hours</button>
+              <button class="cd-btn" data-hours="4">4 Hours</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <div class="footer-left">
+        <span class="badge" id="badge-dryrun">DRY RUN</span>
+        <span class="badge" id="badge-confirm">CONFIRM</span>
+        <span class="badge" id="badge-cancel">CANCEL</span>
+      </div>
+      <div class="footer-right">
+        <span id="version">v5.3.0</span>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Options Modal -->
+  <div class="modal" id="options-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Advanced Options</h2>
+        <button class="modal-close" id="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="option-group">
+          <label>Action Type</label>
+          <select id="sel-action">
+            <option value="shutdown">Shutdown</option>
+            <option value="restart">Restart</option>
+            <option value="sleep">Sleep</option>
+            <option value="hibernate">Hibernate</option>
+            <option value="logout">Log Out</option>
+          </select>
+        </div>
+        <div class="option-group">
+          <label>Grace Period</label>
+          <input type="number" id="grace-minutes" value="2" min="0" max="10">
+          <span>minutes</span>
+        </div>
+        <div class="option-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="chk-forceshutdown">
+            Force shutdown (close all apps)
+          </label>
+        </div>
+        <div class="option-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="chk-mute">
+            Mute system before action
+          </label>
+        </div>
+        <div class="option-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="chk-dryrun">
+            Dry run mode (skip the power action)
+          </label>
+        </div>
+        <div class="option-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="chk-run-login">
+            Run at login (start minimized and idle)
+          </label>
+        </div>
+
+        <!-- Smart Lights Section -->
+        <div class="option-section lights-section">
+          <h3>&#x1F4A1; Smart Lights</h3>
+          
+          <div class="option-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="chk-smart-lights">
+              Enable smart light control
+            </label>
+          </div>
+
+          <div id="lights-config" style="display: none;">
+            <div class="option-group">
+              <label>Provider</label>
+              <select id="sel-light-provider">
+                <option value="none">None</option>
+                <option value="hue">Philips Hue</option>
+                <option value="http">HTTP Webhook</option>
+              </select>
+            </div>
+
+            <div class="option-group">
+              <label>Mode</label>
+              <select id="sel-light-mode">
+                <option value="gradual_dim">Gradual Dim</option>
+                <option value="warm_dim">Warm Shift + Dim</option>
+                <option value="off_at_end">Off at End Only</option>
+              </select>
+            </div>
+
+            <div class="option-group">
+              <label>Dim Duration</label>
+              <input type="number" id="light-dim-minutes" value="10" min="1" max="60">
+              <span>minutes before end</span>
+            </div>
+
+            <!-- Hue Configuration -->
+            <div id="hue-config" style="display: none;">
+              <div class="option-group">
+                <label>Bridge IP</label>
+                <input type="text" id="hue-bridge-ip" placeholder="192.168.1.x">
+                <button type="button" id="btn-discover-hue" class="btn-small">Discover</button>
+              </div>
+              <div class="option-group">
+                <label>Username/API Key</label>
+                <input type="text" id="hue-username" placeholder="Press link button, then Register">
+                <button type="button" id="btn-register-hue" class="btn-small">Register</button>
+              </div>
+              <div class="option-group">
+                <label>Group/Room (optional)</label>
+                <input type="text" id="hue-group-id" placeholder="Group ID">
+                <button type="button" id="btn-load-groups" class="btn-small">Load Groups</button>
+              </div>
+            </div>
+
+            <!-- HTTP Configuration -->
+            <div id="http-config" style="display: none;">
+              <div class="option-group">
+                <label>Webhook URL</label>
+                <input type="url" id="http-url" placeholder="http://...">
+              </div>
+              <div class="option-group">
+                <label>Method</label>
+                <select id="http-method">
+                  <option value="POST">POST</option>
+                  <option value="PUT">PUT</option>
+                </select>
+              </div>
+              <div class="option-group">
+                <label>Body Template</label>
+                <textarea id="http-template" rows="3">{"brightness": {{BRIGHTNESS}}, "color_temp": {{COLOR_TEMP}}, "on": {{ON}}}</textarea>
+                <small>Use {{BRIGHTNESS}}, {{COLOR_TEMP}}, {{ON}}</small>
+              </div>
+            </div>
+
+            <div class="option-group lights-actions">
+              <button type="button" id="btn-test-lights" class="btn-secondary">Test Connection</button>
+              <span id="light-test-result"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Customization Section -->
+        <div class="option-section customize-section">
+          <h3>&#x1F3A8; Customize</h3>
+
+          <div class="option-group">
+            <label>Accent Color</label>
+            <input type="color" id="cz-accent" value="#5b8cff">
+            <div class="swatches" id="cz-swatches">
+              <button type="button" class="swatch" data-color="#5b8cff" style="--sw:#5b8cff"></button>
+              <button type="button" class="swatch" data-color="#a855f7" style="--sw:#a855f7"></button>
+              <button type="button" class="swatch" data-color="#22d3ee" style="--sw:#22d3ee"></button>
+              <button type="button" class="swatch" data-color="#34d399" style="--sw:#34d399"></button>
+              <button type="button" class="swatch" data-color="#f59e0b" style="--sw:#f59e0b"></button>
+              <button type="button" class="swatch" data-color="#fb7185" style="--sw:#fb7185"></button>
+            </div>
+          </div>
+
+          <div class="option-group">
+            <label>Theme</label>
+            <select id="cz-theme">
+              <option value="midnight">Midnight</option>
+              <option value="carbon">Carbon</option>
+              <option value="aurora">Aurora</option>
+            </select>
+          </div>
+
+          <div class="option-group">
+            <label>Ring Style</label>
+            <select id="cz-ring">
+              <option value="glow">Glow</option>
+              <option value="solid">Solid</option>
+              <option value="minimal">Minimal</option>
+            </select>
+          </div>
+
+          <div class="option-group">
+            <label>Window Opacity</label>
+            <input type="range" id="cz-opacity" min="0.6" max="1" step="0.02" value="1">
+            <span id="cz-opacity-val">100%</span>
+          </div>
+
+          <div class="option-group">
+            <label>Sound Volume</label>
+            <input type="range" id="cz-volume" min="0" max="1" step="0.05" value="1">
+            <span id="cz-volume-val">100%</span>
+          </div>
+
+          <div class="option-group">
+            <button type="button" id="btn-reset-customize" class="btn-secondary">Reset to defaults</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="btn-cancel-opt">Cancel</button>
+        <button class="btn-primary" id="btn-save-opt">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profiles Management Modal -->
+  <div class="modal" id="profiles-modal">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h2>Saved Profiles</h2>
+        <button class="modal-close" id="profiles-modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Create New Profile -->
+        <div class="profile-form">
+          <h3>Save Current Settings as Profile</h3>
+          <div class="option-group">
+            <label>Profile Name</label>
+            <input type="text" id="new-profile-name" placeholder="e.g., Movie Night" maxlength="32">
+          </div>
+          <div class="option-group checkbox-row">
+            <label class="checkbox-label">
+              <input type="checkbox" id="new-profile-autostart" checked>
+              Auto-start timer when profile is selected
+            </label>
+          </div>
+          <button class="btn-primary" id="btn-save-profile">Save Profile</button>
+        </div>
+
+        <!-- Existing Profiles -->
+        <div class="profiles-list-section">
+          <h3>Your Profiles</h3>
+          <div class="profiles-list" id="profiles-list">
+            <!-- Profile items loaded dynamically -->
+          </div>
+        </div>
+
+        <!-- Import/Export -->
+        <div class="profiles-import-export">
+          <button class="btn-secondary" id="btn-export-profiles">Export Profiles</button>
+          <button class="btn-secondary" id="btn-import-profiles">Import Profiles</button>
+          <input type="file" id="import-file-input" accept=".json" style="display: none;">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="btn-close-profiles">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
