@@ -46,6 +46,7 @@ jobs:
           node --check media.js
           node --check unsavedGuard.js
           node --check family.js
+          node --check wifiGuard.js
 
       - name: Smoke tests
         run: npm run smoke

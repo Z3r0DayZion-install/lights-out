@@ -1856,6 +1856,16 @@ body.mini-mode .action-btn {
   background: var(--accent-cyan);
   color: #000;
 }
+
+.wifi-guard-section .wifi-device {
+  transition: border-color 0.2s, background 0.2s;
+}
+.wifi-guard-section .wifi-device.selected {
+  background: rgba(91, 140, 255, 0.08);
+}
+.wifi-guard-section .wifi-device:hover {
+  border-color: var(--accent-cyan) !important;
+}
   background: var(--bg-hover);
   color: var(--text-primary);
 }

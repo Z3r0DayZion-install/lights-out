@@ -72,6 +72,19 @@ const DEFAULTS = {
     sound: 'Off',
     customSequences: []
   },
+  wifiGuard: {
+    enabled: false,
+    provider: 'firewall',
+    routerIp: '',
+    routerUser: 'admin',
+    routerPass: '',
+    deviceMacs: [],
+    deviceIps: [],
+    webhookUrl: '',
+    webhookHeaders: {},
+    blockOnDim: true,
+    unblockOnCancel: true
+  },
   // Persisted running-timer snapshot for crash/quit recovery. null when idle.
   activeTimer: null
 };

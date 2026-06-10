@@ -158,5 +158,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Media
   getMediaSessions: () => ipcRenderer.invoke('get-media-sessions'),
   onMediaPaused: (cb) => ipcRenderer.on('media-paused', (e, data) => cb(data)),
-  onUnsavedWorkWarning: (cb) => ipcRenderer.on('unsaved-work-warning', (e, data) => cb(data))
+  onUnsavedWorkWarning: (cb) => ipcRenderer.on('unsaved-work-warning', (e, data) => cb(data)),
+  onWifiGuardStatus: (cb) => ipcRenderer.on('wifi-guard-status', (e, data) => cb(data)),
+
+  // WiFi Guard
+  wifiGuardScan: () => ipcRenderer.invoke('wifi-guard-scan'),
+  wifiGuardBlock: () => ipcRenderer.invoke('wifi-guard-block'),
+  wifiGuardUnblock: () => ipcRenderer.invoke('wifi-guard-unblock'),
+  saveWifiGuardSettings: (s) => ipcRenderer.invoke('save-wifi-guard-settings', s),
+  getWifiGuardSettings: () => ipcRenderer.invoke('get-wifi-guard-settings')
 });

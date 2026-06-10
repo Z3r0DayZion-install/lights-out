@@ -142,6 +142,16 @@ const fallbackApi = (() => {
     getMediaSessions: async () => [],
     onMediaPaused: (cb) => {},
     onUnsavedWorkWarning: (cb) => {},
+    onWifiGuardStatus: (cb) => {},
+    wifiGuardScan: async () => [],
+    wifiGuardBlock: async () => ({ success: true }),
+    wifiGuardUnblock: async () => ({ success: true }),
+    saveWifiGuardSettings: async () => {},
+    getWifiGuardSettings: async () => ({
+      enabled: false, provider: 'firewall', routerIp: '', routerUser: 'admin',
+      routerPass: '', deviceMacs: [], deviceIps: [], webhookUrl: '', webhookHeaders: {},
+      blockOnDim: true, unblockOnCancel: true
+    }),
     addCustomSequence: async () => null,
     removeCustomSequence: async () => ({ success: true }),
     getOpenBrowsers: async () => [],
@@ -325,6 +335,24 @@ const els = {
   btnFamilyScan: document.getElementById('btn-family-scan'),
   familyStatus: document.getElementById('family-status'),
   familyPeers: document.getElementById('family-peers'),
+
+  // WiFi Guard
+  chkWifiGuard: document.getElementById('chk-wifi-guard'),
+  wifiGuardConfig: document.getElementById('wifi-guard-config'),
+  selWifiProvider: document.getElementById('sel-wifi-provider'),
+  wifiRouterCfg: document.getElementById('wifi-router-cfg'),
+  wifiWebhookCfg: document.getElementById('wifi-webhook-cfg'),
+  wifiRouterIp: document.getElementById('wifi-router-ip'),
+  wifiRouterUser: document.getElementById('wifi-router-user'),
+  wifiRouterPass: document.getElementById('wifi-router-pass'),
+  wifiWebhookUrl: document.getElementById('wifi-webhook-url'),
+  btnWifiScan: document.getElementById('btn-wifi-scan'),
+  wifiDeviceList: document.getElementById('wifi-device-list'),
+  chkWifiBlockDim: document.getElementById('chk-wifi-block-dim'),
+  chkWifiUnblockCancel: document.getElementById('chk-wifi-unblock-cancel'),
+  btnWifiBlockTest: document.getElementById('btn-wifi-block-test'),
+  btnWifiUnblockTest: document.getElementById('btn-wifi-unblock-test'),
+  wifiTestResult: document.getElementById('wifi-test-result'),
   // Status pill
   statusPill: document.getElementById('status-pill'),
   statusDot: document.getElementById('status-dot'),
@@ -1158,6 +1186,100 @@ window.familyRemote = async function(ip, action, duration) {
     notify(`Command sent to ${ip}`, 'info');
   } catch { notify('Command failed', 'error'); }
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WiFi Guard: block internet for kids at bedtime
+// ─────────────────────────────────────────────────────────────────────────────
+
+const wifiSelectedDevices = { macs: [], ips: [] };
+
+if (els.chkWifiGuard) {
+  els.chkWifiGuard.addEventListener('change', () => {
+    els.wifiGuardConfig.style.display = els.chkWifiGuard.checked ? '' : 'none';
+  });
+}
+
+if (els.selWifiProvider) {
+  els.selWifiProvider.addEventListener('change', () => {
+    const p = els.selWifiProvider.value;
+    els.wifiRouterCfg.style.display = ['tplink', 'asus', 'netgear'].includes(p) ? '' : 'none';
+    els.wifiWebhookCfg.style.display = p === 'webhook' ? '' : 'none';
+  });
+}
+
+if (els.btnWifiScan) {
+  els.btnWifiScan.addEventListener('click', async () => {
+    els.btnWifiScan.textContent = 'Scanning...';
+    els.btnWifiScan.disabled = true;
+    try {
+      const devices = await api.wifiGuardScan?.();
+      renderWifiDevices(devices || []);
+    } catch { renderWifiDevices([]); }
+    els.btnWifiScan.textContent = 'Scan Network';
+    els.btnWifiScan.disabled = false;
+  });
+}
+
+if (els.btnWifiBlockTest) {
+  els.btnWifiBlockTest.addEventListener('click', async () => {
+    els.wifiTestResult.textContent = 'Blocking...';
+    try {
+      const result = await api.wifiGuardBlock?.();
+      els.wifiTestResult.textContent = result.success ? 'Blocked!' : `Failed: ${result.error}`;
+      els.wifiTestResult.style.color = result.success ? '#4caf50' : '#ff4d4d';
+    } catch { els.wifiTestResult.textContent = 'Error'; }
+  });
+}
+
+if (els.btnWifiUnblockTest) {
+  els.btnWifiUnblockTest.addEventListener('click', async () => {
+    els.wifiTestResult.textContent = 'Unblocking...';
+    try {
+      const result = await api.wifiGuardUnblock?.();
+      els.wifiTestResult.textContent = result.success ? 'Unblocked!' : `Failed: ${result.error}`;
+      els.wifiTestResult.style.color = result.success ? '#4caf50' : '#ff4d4d';
+    } catch { els.wifiTestResult.textContent = 'Error'; }
+  });
+}
+
+function renderWifiDevices(devices) {
+  if (!els.wifiDeviceList) return;
+  if (!devices.length) {
+    els.wifiDeviceList.innerHTML = '<p style="font-size:11px;color:var(--text-muted)">No devices found. Make sure you\'re on the same network.</p>';
+    return;
+  }
+  els.wifiDeviceList.innerHTML = devices.map(d => {
+    const macSel = wifiSelectedDevices.macs.includes(d.mac);
+    const ipSel = wifiSelectedDevices.ips.includes(d.ip);
+    const selected = macSel || ipSel;
+    return `<div class="wifi-device${selected ? ' selected' : ''}" data-mac="${d.mac}" data-ip="${d.ip}" style="display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:4px;cursor:pointer;border:1px solid ${selected ? 'var(--accent-cyan)' : 'var(--bg-card)'};margin-bottom:3px;font-size:11px">
+      <span style="flex:1">&#x1F4F1; ${d.mac} <small style="color:var(--text-muted)">${d.ip}</small></span>
+      <span style="font-size:9px;color:var(--accent-cyan)">${selected ? 'BLOCKED' : 'click to block'}</span>
+    </div>`;
+  }).join('');
+
+  // Click handlers to toggle selection.
+  els.wifiDeviceList.querySelectorAll('.wifi-device').forEach(el => {
+    el.addEventListener('click', () => {
+      const mac = el.dataset.mac;
+      const ip = el.dataset.ip;
+      if (wifiSelectedDevices.macs.includes(mac)) {
+        wifiSelectedDevices.macs = wifiSelectedDevices.macs.filter(m => m !== mac);
+        wifiSelectedDevices.ips = wifiSelectedDevices.ips.filter(i => i !== ip);
+      } else {
+        wifiSelectedDevices.macs.push(mac);
+        wifiSelectedDevices.ips.push(ip);
+      }
+      renderWifiDevices(devices);
+    });
+  });
+}
+
+// WiFi Guard status notification.
+api.onWifiGuardStatus?.(data => {
+  if (data?.blocked) notify('WiFi Guard: Internet blocked', 'warning');
+  else if (data && !data.blocked) notify('WiFi Guard: Internet restored', 'info');
+});
   els.btnPlus.addEventListener('click', () => {
     els.timerInput.value = inputValue() + 1;
     setInputFromSeconds(inputSeconds());
@@ -1289,7 +1411,8 @@ window.familyRemote = async function(ip, action, duration) {
         runAtLogin: state.runAtLogin,
         app: collectAppSettings(),
         customization: state.customization,
-        lastLight: state.lastLight
+        lastLight: state.lastLight,
+        wifiGuard: collectWifiGuardSettings()
       });
       if (typeof saved?.runAtLogin === 'boolean') state.runAtLogin = saved.runAtLogin;
     } catch (error) {
@@ -1671,6 +1794,11 @@ async function loadInitialData() {
       };
       updateLightsUIFromState();
     }
+
+    // Load WiFi Guard config
+    if (appSettings.wifiGuard) {
+      applyWifiGuardSettings(appSettings.wifiGuard);
+    }
   } catch {
     els.batteryLevel.textContent = 'N/A';
     els.powerPlan.textContent = previewMode ? 'Preview' : 'Unknown';
@@ -1712,6 +1840,40 @@ function applyAppSettings(app) {
     setInputFromSeconds(state.remainingSeconds);
   }
   setAction(state.action);
+}
+
+function collectWifiGuardSettings() {
+  return {
+    enabled: els.chkWifiGuard?.checked || false,
+    provider: els.selWifiProvider?.value || 'firewall',
+    routerIp: els.wifiRouterIp?.value || '',
+    routerUser: els.wifiRouterUser?.value || 'admin',
+    routerPass: els.wifiRouterPass?.value || '',
+    deviceMacs: [...wifiSelectedDevices.macs],
+    deviceIps: [...wifiSelectedDevices.ips],
+    webhookUrl: els.wifiWebhookUrl?.value || '',
+    webhookHeaders: {},
+    blockOnDim: els.chkWifiBlockDim?.checked ?? true,
+    unblockOnCancel: els.chkWifiUnblockCancel?.checked ?? true
+  };
+}
+
+function applyWifiGuardSettings(wifi) {
+  if (!wifi) return;
+  if (els.chkWifiGuard) els.chkWifiGuard.checked = !!wifi.enabled;
+  if (els.wifiGuardConfig) els.wifiGuardConfig.style.display = wifi.enabled ? '' : 'none';
+  if (els.selWifiProvider) {
+    els.selWifiProvider.value = wifi.provider || 'firewall';
+    els.selWifiProvider.dispatchEvent(new Event('change'));
+  }
+  if (els.wifiRouterIp) els.wifiRouterIp.value = wifi.routerIp || '';
+  if (els.wifiRouterUser) els.wifiRouterUser.value = wifi.routerUser || 'admin';
+  if (els.wifiRouterPass) els.wifiRouterPass.value = wifi.routerPass || '';
+  if (els.wifiWebhookUrl) els.wifiWebhookUrl.value = wifi.webhookUrl || '';
+  if (els.chkWifiBlockDim) els.chkWifiBlockDim.checked = wifi.blockOnDim !== false;
+  if (els.chkWifiUnblockCancel) els.chkWifiUnblockCancel.checked = wifi.unblockOnCancel !== false;
+  wifiSelectedDevices.macs = wifi.deviceMacs || [];
+  wifiSelectedDevices.ips = wifi.deviceIps || [];
 }
 
 function applyCustomization(c) {

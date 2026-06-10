@@ -14,6 +14,7 @@ const companion = require('./companion');
 const media = require('./media');
 const unsavedGuard = require('./unsavedGuard');
 const family = require('./family');
+const wifiGuard = require('./wifiGuard');
 
 const APP_ICON = path.join(__dirname, 'assets', 'icon.ico');
 
@@ -591,6 +592,15 @@ function applyDimPhase(remainingSeconds, totalSeconds) {
       mainWindow.webContents.send('media-paused', { players: result.paused });
     }
   }).catch(() => {});
+  // WiFi Guard: block internet for kids during dim phase.
+  const wifiConfig = settingsStore.getSection('wifiGuard');
+  if (wifiConfig && wifiConfig.enabled && wifiConfig.blockOnDim !== false) {
+    wifiGuard.blockInternet(wifiConfig).then(result => {
+      if (result.success && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('wifi-guard-status', { blocked: true, provider: result.provider });
+      }
+    }).catch(() => {});
+  }
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('dim-phase-started', { remainingSeconds, totalSeconds });
   }
@@ -638,6 +648,15 @@ function restoreAfterTimer() {
   ).catch(() => {});
   // Resume media that was auto-paused during dim phase.
   media.resumeAllMedia().catch(() => {});
+  // Restore WiFi access if WiFi Guard was active.
+  const wifiConfig = settingsStore.getSection('wifiGuard');
+  if (wifiConfig && wifiConfig.enabled && wifiConfig.unblockOnCancel !== false) {
+    wifiGuard.unblockInternet(wifiConfig).then(result => {
+      if (result.success && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('wifi-guard-status', { blocked: false, provider: result.provider });
+      }
+    }).catch(() => {});
+  }
 }
 
 // First Light: the morning bookend to Last Light.
@@ -1043,6 +1062,26 @@ ipcMain.handle('family-remote-snooze', async (e, ip, seconds) => {
 });
 ipcMain.handle('get-media-sessions', async () => {
   try { return await media.detectMediaSessions(); } catch { return []; }
+});
+ipcMain.handle('wifi-guard-scan', async () => {
+  try { return await wifiGuard.scanDevices(); } catch { return []; }
+});
+ipcMain.handle('wifi-guard-block', async () => {
+  const config = settingsStore.getSection('wifiGuard');
+  if (!config || !config.enabled) return { success: false, error: 'WiFi Guard not enabled' };
+  return wifiGuard.blockInternet(config);
+});
+ipcMain.handle('wifi-guard-unblock', async () => {
+  const config = settingsStore.getSection('wifiGuard');
+  if (!config) return { success: false };
+  return wifiGuard.unblockInternet(config);
+});
+ipcMain.handle('save-wifi-guard-settings', async (e, wifiSettings) => {
+  settingsStore.setSection('wifiGuard', wifiSettings);
+  return { saved: true };
+});
+ipcMain.handle('get-wifi-guard-settings', async () => {
+  return settingsStore.getSection('wifiGuard');
 });
 ipcMain.handle('resume-recoverable-timer', async () => {
   const snapshot = getRecoverableTimer();

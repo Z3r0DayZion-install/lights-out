@@ -532,7 +532,7 @@
         <button class="footer-action" id="btn-widget" title="Desktop widget">&#x1F4CA;</button>
         <button class="footer-action" id="btn-companion" title="Companion PWA">&#x1F4F1;</button>
         <span class="badge update-badge" id="badge-update" style="display:none" title="Update available">UPDATE</span>
-        <span id="version">v8.1.0</span>
+        <span id="version">v8.2.0</span>
       </div>
     </footer>
 
@@ -712,6 +712,88 @@
             <span id="family-status" style="margin-left:8px;font-size:11px;color:var(--text-muted)"></span>
           </div>
           <div id="family-peers" style="margin-top:6px"></div>
+        </div>
+
+        <!-- WiFi Guard Section -->
+        <div class="option-section wifi-guard-section">
+          <h3>&#x1F6E1;&#xFE0F; WiFi Guard</h3>
+          <p style="font-size:10px;color:var(--text-muted);margin:4px 0 8px">Block internet for kids' devices at bedtime.</p>
+
+          <div class="option-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="chk-wifi-guard">
+              Enable WiFi Guard
+            </label>
+          </div>
+
+          <div id="wifi-guard-config" style="display:none">
+            <div class="option-group">
+              <label>Provider</label>
+              <select id="sel-wifi-provider">
+                <option value="firewall">Windows Firewall (IP-based)</option>
+                <option value="adapter">WiFi Adapter (disable entirely)</option>
+                <option value="tplink">TP-Link Router</option>
+                <option value="asus">ASUS Router</option>
+                <option value="netgear">Netgear Router</option>
+                <option value="webhook">Custom Webhook</option>
+              </select>
+              <small style="display:block;font-size:9px;color:var(--text-muted);margin-top:2px">
+                Firewall blocks by IP. Router blocks by MAC (works for phones/tablets too). Adapter disables your WiFi entirely.
+              </small>
+            </div>
+
+            <!-- Router config (shown for tplink/asus/netgear) -->
+            <div id="wifi-router-cfg" style="display:none">
+              <div class="option-group">
+                <label>Router IP</label>
+                <input type="text" id="wifi-router-ip" placeholder="192.168.1.1">
+              </div>
+              <div class="option-group">
+                <label>Username</label>
+                <input type="text" id="wifi-router-user" placeholder="admin">
+              </div>
+              <div class="option-group">
+                <label>Password</label>
+                <input type="password" id="wifi-router-pass" placeholder="Router admin password">
+              </div>
+            </div>
+
+            <!-- Webhook config -->
+            <div id="wifi-webhook-cfg" style="display:none">
+              <div class="option-group">
+                <label>Webhook URL</label>
+                <input type="url" id="wifi-webhook-url" placeholder="http://...">
+              </div>
+            </div>
+
+            <div class="option-group">
+              <label>Devices to Block</label>
+              <button type="button" id="btn-wifi-scan" class="btn-secondary" style="margin-bottom:6px">Scan Network</button>
+              <div id="wifi-device-list" style="max-height:160px;overflow-y:auto"></div>
+              <small style="display:block;font-size:9px;color:var(--text-muted);margin-top:4px">
+                Click devices to add them. Router mode uses MAC addresses; Firewall mode uses IPs.
+              </small>
+            </div>
+
+            <div class="option-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="chk-wifi-block-dim" checked>
+                Block internet when dim phase starts
+              </label>
+            </div>
+            <div class="option-group">
+              <label class="checkbox-label">
+                <input type="checkbox" id="chk-wifi-unblock-cancel" checked>
+                Restore internet when timer is cancelled
+              </label>
+            </div>
+
+            <div class="option-group" style="display:flex;gap:8px;align-items:center">
+              <button type="button" id="btn-wifi-block-test" class="btn-secondary">Test Block</button>
+              <button type="button" id="btn-wifi-unblock-test" class="btn-secondary">Test Unblock</button>
+              <span id="wifi-test-result" style="font-size:11px;color:var(--text-muted)"></span>
+            </div>
+          </div>
         </div>
 
         <!-- Customization Section -->
