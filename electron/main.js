@@ -10,6 +10,7 @@ const streaks = require('./streaks');
 const alarm = require('./alarm');
 const updater = require('./updater');
 const calProviders = require('./calendarProviders');
+const companion = require('./companion');
 
 const APP_ICON = path.join(__dirname, 'assets', 'icon.ico');
 
@@ -655,6 +656,49 @@ function formatAction(action) {
   return labels[action] || 'Power action';
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Companion PWA message handling
+// ─────────────────────────────────────────────────────────────────────────────
+
+function handleCompanionMessage(msg, client) {
+  if (!msg || !msg.action) return;
+  switch (msg.action) {
+    case 'start':
+      startTimer({
+        durationSeconds: msg.durationSeconds || 1800,
+        action: msg.timerAction || 'shutdown'
+      });
+      break;
+    case 'togglePause':
+      if (timerState.paused) resumeTimer();
+      else if (timerState.running) pauseTimer();
+      break;
+    case 'snooze':
+      snoozeTimer(msg.seconds || 300);
+      break;
+    case 'cancel':
+      cancelTimer();
+      break;
+  }
+  // Immediately broadcast updated state after action.
+  setTimeout(broadcastCompanionState, 300);
+}
+
+function broadcastCompanionState() {
+  const appSettings = settingsStore.getSection('app') || {};
+  companion.broadcast({
+    type: 'state',
+    running: timerState.running,
+    paused: timerState.paused,
+    remainingSeconds: timerState.remainingSeconds,
+    totalSeconds: timerState.totalSeconds,
+    action: timerState.action,
+    phase: timerState.phase,
+    timerName: appSettings.timerName || 'Witching Hour',
+    dryRun: timerState.dryRun
+  });
+}
+
 function formatTime(totalSeconds) {
   const seconds = Math.max(0, Math.round(totalSeconds));
   const hours = Math.floor(seconds / 3600);
@@ -843,6 +887,9 @@ ipcMain.handle('get-achievements-catalog', async () => {
 ipcMain.handle('get-weekly-report', async () => {
   try { return streaks.getWeeklyReport(); } catch { return null; }
 });
+ipcMain.handle('get-sleep-score', async () => {
+  try { return streaks.getSleepScore(); } catch { return { score: null, label: 'Error', breakdown: {} }; }
+});
 ipcMain.handle('add-custom-sequence', async (event, seq) => {
   const entry = lastLight.addCustomSequence(seq);
   if (entry) {
@@ -945,6 +992,9 @@ ipcMain.handle('save-calendar-settings', async (event, calSettings) => {
 });
 ipcMain.handle('get-calendar-settings', async () => {
   return settingsStore.getSection('calendar');
+});
+ipcMain.handle('get-companion-status', async () => {
+  return companion.getStatus();
 });
 ipcMain.handle('resume-recoverable-timer', async () => {
   const snapshot = getRecoverableTimer();
@@ -1332,6 +1382,25 @@ app.whenReady().then(async () => {
     }
   });
 
+  // Start companion PWA server.
+  companion.start();
+  companion.onMessage((msg, client) => {
+    handleCompanionMessage(msg, client);
+  });
+  companion.onConnect((client) => {
+    // Send initial state + streaks on connect.
+    setTimeout(() => {
+      broadcastCompanionState();
+      try {
+        const summary = streaks.getSummary();
+        companion.broadcast({ type: 'streaks', streak: summary.streak || 0, bestStreak: summary.bestStreak || 0 });
+      } catch {}
+    }, 500);
+  });
+
+  // Broadcast timer state to companion clients periodically.
+  setInterval(broadcastCompanionState, 2000);
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
@@ -1350,4 +1419,5 @@ app.on('before-quit', () => {
   app.isQuitting = true;
   clearTimerInterval();
   globalShortcut.unregisterAll();
+  companion.stop();
 });

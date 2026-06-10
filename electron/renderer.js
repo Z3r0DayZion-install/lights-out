@@ -129,6 +129,8 @@ const fallbackApi = (() => {
     getStreaks: async () => ({ streak: 0, bestStreak: 0, totalNights: 0, achievements: [], weekAvg: '--:--', weekOnTime: 0, weekDays: [] }),
     getAchievementsCatalog: async () => [],
     getWeeklyReport: async () => null,
+    getSleepScore: async () => ({ score: null, label: 'Preview', breakdown: {} }),
+    getCompanionStatus: async () => ({ running: false, port: 0, clients: 0, url: '' }),
     addCustomSequence: async () => null,
     removeCustomSequence: async () => ({ success: true }),
     getOpenBrowsers: async () => [],
@@ -292,6 +294,11 @@ const els = {
   streakOnTime: document.getElementById('streak-ontime'),
   streakWeekBar: document.getElementById('streak-week-bar'),
   achievementsGrid: document.getElementById('achievements-grid'),
+  // Sleep score
+  scoreValue: document.getElementById('score-value'),
+  scoreLabel: document.getElementById('score-label'),
+  scoreBreakdown: document.getElementById('score-breakdown'),
+  scoreRingFill: document.getElementById('score-ring-fill'),
   // Custom Last Light sequences
   customSeqList: document.getElementById('custom-seq-list'),
   btnAddCustomSeq: document.getElementById('btn-add-custom-seq'),
@@ -303,6 +310,8 @@ const els = {
   btnCancelCustomSeq: document.getElementById('btn-cancel-custom-seq'),
   // Widget
   btnWidget: document.getElementById('btn-widget'),
+  // Companion
+  btnCompanion: document.getElementById('btn-companion'),
   // Status pill
   statusPill: document.getElementById('status-pill'),
   statusDot: document.getElementById('status-dot'),
@@ -961,12 +970,41 @@ async function loadStreaks() {
     const summary = await api.getStreaks();
     const catalog = await api.getAchievementsCatalog();
     const report = await api.getWeeklyReport();
-    renderStreaks(summary, catalog, report);
+    const sleepScore = await api.getSleepScore();
+    renderStreaks(summary, catalog, report, sleepScore);
   } catch { /* streaks are decorative, never block */ }
 }
 
-function renderStreaks(summary, catalog, report) {
+function renderStreaks(summary, catalog, report, sleepScore) {
   if (!summary) return;
+
+  // Sleep Score.
+  if (sleepScore && sleepScore.score !== null) {
+    if (els.scoreValue) els.scoreValue.textContent = sleepScore.score;
+    if (els.scoreLabel) els.scoreLabel.textContent = sleepScore.label || 'Sleep Score';
+    // Animate the ring fill (circumference = 2 * PI * 52 = ~327).
+    const pct = sleepScore.score / 100;
+    const offset = 327 - (327 * pct);
+    if (els.scoreRingFill) {
+      els.scoreRingFill.style.strokeDashoffset = offset;
+      const colors = { 'Legendary': '#4caf50', 'Excellent': '#76c9ff', 'Good': '#d4a50a', 'Fair': '#ff9800', 'Needs Work': '#ff4d4d' };
+      els.scoreRingFill.style.stroke = colors[sleepScore.label] || '#5b8cff';
+    }
+    // Breakdown bars.
+    if (els.scoreBreakdown) {
+      const bd = sleepScore.breakdown || {};
+      els.scoreBreakdown.innerHTML = [
+        bd.consistency ? `<div class="score-bar"><span class="score-bar-label">Consistency</span><div class="score-bar-track"><div class="score-bar-fill" style="width:${Math.round(bd.consistency.score/bd.consistency.max*100)}%"></div></div><span class="score-bar-val">${bd.consistency.score}/${bd.consistency.max}</span></div>` : '',
+        bd.onTime ? `<div class="score-bar"><span class="score-bar-label">On-time</span><div class="score-bar-track"><div class="score-bar-fill" style="width:${Math.round(bd.onTime.score/bd.onTime.max*100)}%"></div></div><span class="score-bar-val">${bd.onTime.score}/${bd.onTime.max}</span></div>` : '',
+        bd.noSnooze ? `<div class="score-bar"><span class="score-bar-label">No Snooze</span><div class="score-bar-track"><div class="score-bar-fill" style="width:${Math.round(bd.noSnooze.score/bd.noSnooze.max*100)}%"></div></div><span class="score-bar-val">${bd.noSnooze.score}/${bd.noSnooze.max}</span></div>` : '',
+        bd.ritual ? `<div class="score-bar"><span class="score-bar-label">Ritual</span><div class="score-bar-track"><div class="score-bar-fill" style="width:${Math.round(bd.ritual.score/bd.ritual.max*100)}%"></div></div><span class="score-bar-val">${bd.ritual.score}/${bd.ritual.max}</span></div>` : ''
+      ].join('');
+    }
+  } else if (els.scoreValue) {
+    els.scoreValue.textContent = '--';
+    if (els.scoreLabel) els.scoreLabel.textContent = 'Sleep Score (need 3+ nights)';
+  }
+
   if (els.streakCount) els.streakCount.textContent = summary.streak || 0;
   if (els.streakBest) els.streakBest.textContent = summary.bestStreak || 0;
   if (els.streakTotal) els.streakTotal.textContent = summary.totalNights || 0;
@@ -1061,7 +1099,15 @@ function wireEvents() {
   els.btnWidget?.addEventListener('click', () => {
     api.toggleWidget?.();
   });
-
+  els.btnCompanion?.addEventListener('click', async () => {
+    try {
+      const status = await api.getCompanionStatus?.();
+      if (status?.url) {
+        await api.openExternal?.(status.url);
+        notify(`Companion PWA at ${status.url}`, 'info');
+      }
+    } catch {}
+  });
   els.btnPlus.addEventListener('click', () => {
     els.timerInput.value = inputValue() + 1;
     setInputFromSeconds(inputSeconds());

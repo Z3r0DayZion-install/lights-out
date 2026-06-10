@@ -215,6 +215,68 @@ function getWeeklyReport() {
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Sleep Score: composite 0-100 score
+// ─────────────────────────────────────────────────────────────────────────────
+
+function getSleepScore() {
+  const data = load();
+  const now = new Date();
+  const recent30 = data.events.filter(e => {
+    const d = new Date(e.date + 'T12:00:00');
+    return (now - d) < 30 * 86400000;
+  });
+
+  if (recent30.length < 3) return { score: null, label: 'Not enough data', breakdown: {} };
+
+  // 1. Consistency (0-30): lower std dev = higher score.
+  // Target: <30 min std dev = 30 points, >90 min = 0 points.
+  const bedtimes = recent30.map(e => {
+    const [h, m] = (e.bedTime || '23:00').split(':').map(Number);
+    return h * 60 + m;
+  });
+  const mean = bedtimes.reduce((s, t) => s + t, 0) / bedtimes.length;
+  const stdDev = Math.sqrt(bedtimes.reduce((s, t) => s + Math.pow(t - mean, 2), 0) / bedtimes.length);
+  const consistencyScore = Math.round(Math.max(0, 30 * (1 - stdDev / 90)));
+
+  // 2. On-time rate (0-25): % of nights before target bedtime.
+  // Target bedtime: from settings or mean - 15 min.
+  const targetBedtime = mean - 15;
+  const onTimeCount = bedtimes.filter(t => t <= targetBedtime + 10).length; // 10 min grace
+  const onTimeRate = onTimeCount / recent30.length;
+  const onTimeScore = Math.round(25 * onTimeRate);
+
+  // 3. No-snooze rate (0-25): % of nights without snooze.
+  const noSnoozeCount = recent30.filter(e => !e.snoozed).length;
+  const noSnoozeRate = noSnoozeCount / recent30.length;
+  const noSnoozeScore = Math.round(25 * noSnoozeRate);
+
+  // 4. Ritual completion (0-20): streak bonus + achievements.
+  const streakBonus = Math.min(10, (data.streak || 0) * 2);
+  const achievementBonus = Math.min(10, (data.achievements || []).length * 2);
+  const ritualScore = streakBonus + achievementBonus;
+
+  const totalScore = Math.min(100, consistencyScore + onTimeScore + noSnoozeScore + ritualScore);
+
+  let label;
+  if (totalScore >= 90) label = 'Legendary';
+  else if (totalScore >= 75) label = 'Excellent';
+  else if (totalScore >= 60) label = 'Good';
+  else if (totalScore >= 40) label = 'Fair';
+  else label = 'Needs Work';
+
+  return {
+    score: totalScore,
+    label,
+    breakdown: {
+      consistency: { score: consistencyScore, max: 30, stdDev: Math.round(stdDev) },
+      onTime: { score: onTimeScore, max: 25, rate: Math.round(onTimeRate * 100) },
+      noSnooze: { score: noSnoozeScore, max: 25, rate: Math.round(noSnoozeRate * 100) },
+      ritual: { score: ritualScore, max: 20, streak: data.streak || 0, achievements: (data.achievements || []).length }
+    }
+  };
+}
+
 function formatTime() {
   const now = new Date();
   return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -226,6 +288,7 @@ module.exports = {
   getWeekStats,
   getAchievementCatalog,
   getWeeklyReport,
+  getSleepScore,
   // Testing helpers.
   _load: load,
   _reset: () => { cache = null; }

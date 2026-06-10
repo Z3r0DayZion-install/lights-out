@@ -42,6 +42,7 @@ jobs:
           node --check alarm.js
           node --check updater.js
           node --check calendarProviders.js
+          node --check companion.js
 
       - name: Smoke tests
         run: npm run smoke

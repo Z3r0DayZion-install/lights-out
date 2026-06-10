@@ -94,6 +94,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getStreaks: () => ipcRenderer.invoke('get-streaks'),
   getAchievementsCatalog: () => ipcRenderer.invoke('get-achievements-catalog'),
   getWeeklyReport: () => ipcRenderer.invoke('get-weekly-report'),
+  getSleepScore: () => ipcRenderer.invoke('get-sleep-score'),
 
   // Custom Last Light sequences
   addCustomSequence: (seq) => ipcRenderer.invoke('add-custom-sequence', seq),
@@ -141,5 +142,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getCalendarProviders: () => ipcRenderer.invoke('get-calendar-providers'),
   fetchCalendarEvents: (withinDays) => ipcRenderer.invoke('fetch-calendar-events', withinDays),
   saveCalendarSettings: (calSettings) => ipcRenderer.invoke('save-calendar-settings', calSettings),
-  getCalendarSettings: () => ipcRenderer.invoke('get-calendar-settings')
+  getCalendarSettings: () => ipcRenderer.invoke('get-calendar-settings'),
+
+  // Companion PWA
+  getCompanionStatus: () => ipcRenderer.invoke('get-companion-status')
 });

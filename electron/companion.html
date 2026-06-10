@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0d0e11">
+  <link rel="manifest" href="/manifest.json">
+  <title>Lights Out</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #0d0e11;
+      color: #e8ecf1;
+      font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .pwa {
+      width: 100%;
+      max-width: 400px;
+      padding: 24px 20px;
+      text-align: center;
+    }
+    .brand {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #5b8cff;
+      margin-bottom: 32px;
+      opacity: 0.8;
+    }
+    .timer-display {
+      margin-bottom: 8px;
+    }
+    .timer-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #5b8cff;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .timer-main {
+      font-size: 64px;
+      font-weight: 700;
+      color: #76c9ff;
+      letter-spacing: -2px;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+      text-shadow: 0 0 30px rgba(118, 201, 255, 0.3);
+    }
+    .timer-label {
+      font-size: 13px;
+      color: #6b7685;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-top: 8px;
+      margin-bottom: 32px;
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 16px;
+      border-radius: 20px;
+      background: #252b31;
+      font-size: 12px;
+      font-weight: 500;
+      color: #6b7685;
+      margin-bottom: 24px;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #6b7685;
+    }
+    .status-pill.running { background: rgba(76,175,80,0.1); color: #4caf50; }
+    .status-pill.running .status-dot { background: #4caf50; animation: pulse 1.5s ease infinite; }
+    .status-pill.paused { background: rgba(212,165,10,0.1); color: #d4a50a; }
+    .status-pill.paused .status-dot { background: #d4a50a; }
+    .status-pill.dim { background: rgba(91,140,255,0.1); color: #4a9eff; }
+    .status-pill.dim .status-dot { background: #4a9eff; animation: pulse 2s ease infinite; }
+    .status-pill.lastlight { background: rgba(255,77,77,0.1); color: #ff4d4d; }
+    .status-pill.lastlight .status-dot { background: #ff4d4d; animation: pulse 0.8s ease infinite; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .quick-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .btn {
+      padding: 14px 16px;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      letter-spacing: 0.3px;
+    }
+    .btn:active { transform: scale(0.96); }
+    .btn-primary {
+      background: #5b8cff;
+      color: #111418;
+    }
+    .btn-primary:hover { background: #4a9eff; }
+    .btn-secondary {
+      background: #252b31;
+      color: #9aa5b8;
+      border: 1px solid #2a3040;
+    }
+    .btn-secondary:hover { background: #273039; border-color: #5b8cff; }
+    .btn-danger {
+      background: rgba(255,77,77,0.12);
+      color: #ff4d4d;
+      border: 1px solid rgba(255,77,77,0.2);
+    }
+    .btn-danger:hover { background: rgba(255,77,77,0.2); }
+    .btn-amber {
+      background: rgba(212,165,10,0.12);
+      color: #d4a50a;
+      border: 1px solid rgba(212,165,10,0.2);
+    }
+    .btn-amber:hover { background: rgba(212,165,10,0.2); }
+    .timer-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .timer-actions .btn { flex: 1; }
+    .disconnected {
+      color: #6b7685;
+      font-size: 12px;
+      margin-top: 24px;
+    }
+    .streak {
+      margin-top: 20px;
+      padding: 12px;
+      background: #1b2024;
+      border-radius: 10px;
+      border: 1px solid #2a3040;
+    }
+    .streak-label {
+      font-size: 10px;
+      color: #6b7685;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .streak-number {
+      font-size: 32px;
+      font-weight: 700;
+      color: #d4a50a;
+    }
+  </style>
+</head>
+<body>
+  <div class="pwa">
+    <div class="brand">Lights Out</div>
+
+    <div class="timer-display">
+      <div class="timer-name" id="timer-name">Witching Hour</div>
+      <div class="timer-main" id="timer-main">--:--</div>
+      <div class="timer-label" id="timer-label">Idle</div>
+    </div>
+
+    <div class="status-pill" id="status-pill">
+      <span class="status-dot" id="status-dot"></span>
+      <span class="status-text" id="status-text">Connecting...</span>
+    </div>
+
+    <!-- Quick start (shown when idle) -->
+    <div class="controls" id="idle-controls">
+      <div class="quick-grid">
+        <button class="btn btn-primary" data-min="15">15 min</button>
+        <button class="btn btn-primary" data-min="30">30 min</button>
+        <button class="btn btn-primary" data-min="45">45 min</button>
+        <button class="btn btn-primary" data-min="60">1 hour</button>
+      </div>
+    </div>
+
+    <!-- Timer actions (shown when running) -->
+    <div class="controls" id="active-controls" style="display:none">
+      <div class="timer-actions">
+        <button class="btn btn-secondary" id="btn-pause">Pause</button>
+        <button class="btn btn-amber" id="btn-snooze">Snooze +5</button>
+      </div>
+      <button class="btn btn-danger" id="btn-cancel">Cancel Timer</button>
+    </div>
+
+    <div class="streak" id="streak-section" style="display:none">
+      <div class="streak-label">Night Streak</div>
+      <div class="streak-number" id="streak-count">0</div>
+    </div>
+
+    <div class="disconnected" id="disconnected" style="display:none">
+      Not connected to desktop app
+    </div>
+  </div>
+
+  <script>
+    const timerMain = document.getElementById('timer-main');
+    const timerLabel = document.getElementById('timer-label');
+    const timerName = document.getElementById('timer-name');
+    const statusPill = document.getElementById('status-pill');
+    const statusText = document.getElementById('status-text');
+    const idleControls = document.getElementById('idle-controls');
+    const activeControls = document.getElementById('active-controls');
+    const disconnected = document.getElementById('disconnected');
+    const streakSection = document.getElementById('streak-section');
+    const streakCount = document.getElementById('streak-count');
+
+    let ws = null;
+    let reconnectTimer = null;
+
+    function connect() {
+      const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      ws = new WebSocket(`${proto}//${location.host}`);
+
+      ws.onopen = () => {
+        disconnected.style.display = 'none';
+        statusText.textContent = 'Idle';
+      };
+
+      ws.onmessage = (e) => {
+        try {
+          const data = JSON.parse(e.data);
+          handleUpdate(data);
+        } catch {}
+      };
+
+      ws.onclose = () => {
+        disconnected.style.display = '';
+        scheduleReconnect();
+      };
+
+      ws.onerror = () => {
+        disconnected.style.display = '';
+        scheduleReconnect();
+      };
+    }
+
+    function scheduleReconnect() {
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      reconnectTimer = setTimeout(connect, 3000);
+    }
+
+    function send(data) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(data));
+      }
+    }
+
+    function handleUpdate(data) {
+      if (data.type === 'state') {
+        const running = data.running;
+        const paused = data.paused;
+        const phase = data.phase || 'idle';
+
+        timerName.textContent = data.timerName || 'Witching Hour';
+        timerMain.textContent = formatTime(data.remainingSeconds);
+        timerLabel.textContent = running
+          ? (paused ? 'Paused' : `until ${data.action || 'shutdown'}`)
+          : 'Idle';
+
+        // Status pill
+        statusPill.className = 'status-pill';
+        if (!running) { statusText.textContent = 'Idle'; }
+        else if (paused) { statusPill.classList.add('paused'); statusText.textContent = 'Paused'; }
+        else {
+          const cls = phase === 'dim' ? 'dim' : phase === 'lastlight' ? 'lastlight' : 'running';
+          statusPill.classList.add(cls);
+          const labels = { focus: 'Focus', dim: 'Winding Down', lastlight: 'Last Light', idle: 'Running' };
+          statusText.textContent = labels[phase] || 'Running';
+        }
+
+        // Show/hide controls
+        idleControls.style.display = (running || paused) ? 'none' : '';
+        activeControls.style.display = (running || paused) ? '' : 'none';
+
+        // Pause/Resume
+        const btnPause = document.getElementById('btn-pause');
+        if (btnPause) btnPause.textContent = paused ? 'Resume' : 'Pause';
+      }
+
+      if (data.type === 'streaks') {
+        if (data.streak > 0) {
+          streakSection.style.display = '';
+          streakCount.textContent = data.streak;
+        }
+      }
+    }
+
+    function formatTime(sec) {
+      if (!sec && sec !== 0) return '--:--';
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = sec % 60;
+      if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+      return `${m}:${String(s).padStart(2,'0')}`;
+    }
+
+    // Quick start buttons
+    document.querySelectorAll('[data-min]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        send({ action: 'start', durationSeconds: parseInt(btn.dataset.min) * 60, timerAction: 'shutdown' });
+      });
+    });
+
+    // Timer action buttons
+    document.getElementById('btn-pause')?.addEventListener('click', () => {
+      send({ action: 'togglePause' });
+    });
+    document.getElementById('btn-snooze')?.addEventListener('click', () => {
+      send({ action: 'snooze', seconds: 300 });
+    });
+    document.getElementById('btn-cancel')?.addEventListener('click', () => {
+      send({ action: 'cancel' });
+    });
+
+    connect();
+  </script>
+</body>
+</html>
