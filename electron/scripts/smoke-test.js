@@ -131,62 +131,9 @@ check('startup: no default force-shutdown auto-start', () => {
 
 // 7. Core UI controls exist (start/pause/resume/snooze/cancel/mini + customize).
 const htmlSrc = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
-for (const id of ['btn-start', 'btn-stop', 'btn-pause', 'btn-snooze', 'btn-mini', 'cz-accent', 'cz-theme', 'cz-ring', 'cz-opacity', 'cz-volume', 'chk-lastlight', 'sel-lastlight-sequence', 'warning-modal', 'last-light-overlay', 'morning-proof-section', 'proof-card', 'receipts-modal']) {
+for (const id of ['btn-start', 'btn-stop', 'btn-pause', 'btn-snooze', 'btn-mini', 'cz-accent', 'cz-theme', 'cz-ring', 'cz-opacity', 'cz-volume', 'chk-lastlight', 'sel-lastlight-sequence', 'warning-modal', 'last-light-overlay']) {
   check(`ui: #${id} present`, () => {
     assert(htmlSrc.includes(`id="${id}"`), `missing #${id}`);
-  });
-}
-
-// 8. Run Receipts module logic.
-const rrPath = path.join(root, 'runReceipts.js');
-if (fs.existsSync(rrPath)) {
-  // runReceipts lazily loads electron, so it works outside Electron too.
-  const rr = require(rrPath);
-
-  check('receipts: create + update receipt', () => {
-    const r = rr.createRunReceipt({ action: 'shutdown', totalSeconds: 1800, dryRun: true, forceShutdown: false });
-    assert(r.id, 'receipt needs id');
-    assert(r.result === 'running', 'initial result should be running');
-    const updated = rr.updateRunReceipt(r.id, { result: 'dry_run_completed', endedAt: new Date().toISOString() });
-    assert(updated.result === 'dry_run_completed', 'update failed');
-  });
-
-  check('receipts: list and latest', () => {
-    const list = rr.listReceipts(10);
-    assert(Array.isArray(list), 'list should be array');
-    const latest = rr.getLatestReceipt();
-    assert(latest && latest.id, 'latest should exist');
-  });
-
-  check('receipts: pause/snooze/warning increments', () => {
-    const r = rr.createRunReceipt({ action: 'sleep', totalSeconds: 600 });
-    rr.receiptPaused(r.id);
-    rr.receiptPaused(r.id);
-    rr.receiptSnoozed(r.id);
-    rr.receiptWarning(r.id);
-    rr.receiptWarning(r.id);
-    rr.receiptWarning(r.id);
-    const updated = rr._load().receipts.find(x => x.id === r.id);
-    assert(updated.pauseCount === 2, `pauseCount should be 2, got ${updated.pauseCount}`);
-    assert(updated.snoozeCount === 1, `snoozeCount should be 1, got ${updated.snoozeCount}`);
-    assert(updated.warningsShown === 3, `warningsShown should be 3, got ${updated.warningsShown}`);
-  });
-
-  check('receipts: clear and prune', () => {
-    rr.clearReceipts();
-    const after = rr.listReceipts();
-    assert(after.length === 0, 'should be empty after clear');
-    assert(rr.MAX_RECEIPTS === 100, 'max should be 100');
-  });
-
-  check('receipts: malformed file recovery', () => {
-    // Find where runReceipts stores its file (os.tmpdir when not in Electron).
-    const rrFile = path.join(os.tmpdir(), 'run-receipts.json');
-    fs.writeFileSync(rrFile, '{bad json', 'utf8');
-    rr._reset();
-    const data = rr._load();
-    assert(Array.isArray(data.receipts), 'should recover from malformed file');
-    rr.clearReceipts();
   });
 }
 

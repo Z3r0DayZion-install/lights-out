@@ -53,7 +53,6 @@ jobs:
           node --check screenTime.js
           node --check sleepDebt.js
           node --check emergencyOverride.js
-          node --check runReceipts.js
 
       - name: Smoke tests
         run: npm run smoke

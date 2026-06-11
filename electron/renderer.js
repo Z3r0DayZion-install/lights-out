@@ -182,11 +182,6 @@ const fallbackApi = (() => {
     setWakeTime: async () => '07:00',
     getOverrideConsequences: async () => ({ allowed: true, consequences: [] }),
     executeOverride: async () => ({ overridden: true }),
-    getLatestReceipt: async () => null,
-    listReceipts: async () => [],
-    clearReceipts: async () => ({ cleared: true }),
-    getReceiptStats: async () => ({ total: 0, completed: 0, cancelled: 0, dryRun: 0, blocked: 0 }),
-    openExternal: async () => {},
     addCustomSequence: async () => null,
     removeCustomSequence: async () => ({ success: true }),
     getOpenBrowsers: async () => [],
@@ -442,20 +437,6 @@ const els = {
   overrideReasonInput: document.getElementById('override-reason-input'),
   btnOverrideConfirm: document.getElementById('btn-override-confirm'),
   btnOverrideCancel: document.getElementById('btn-override-cancel'),
-
-  // Morning Proof / Run Receipts
-  morningProofSection: document.getElementById('morning-proof-section'),
-  proofCard: document.getElementById('proof-card'),
-  proofIcon: document.getElementById('proof-icon'),
-  proofBadge: document.getElementById('proof-badge'),
-  proofBody: document.getElementById('proof-body'),
-  btnProofDetails: document.getElementById('btn-proof-details'),
-  btnProofCopy: document.getElementById('btn-proof-copy'),
-  receiptsModal: document.getElementById('receipts-modal'),
-  receiptsModalClose: document.getElementById('receipts-modal-close'),
-  receiptStats: document.getElementById('receipt-stats'),
-  receiptsList: document.getElementById('receipts-list'),
-  btnClearReceipts: document.getElementById('btn-clear-receipts'),
   // Status pill
   statusPill: document.getElementById('status-pill'),
   statusDot: document.getElementById('status-dot'),
@@ -1687,155 +1668,6 @@ if (els.btnOverrideCancel) {
   els.btnOverrideCancel.addEventListener('click', () => {
     hideOverrideModal();
   });
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Morning Proof / Run Receipts
-// ─────────────────────────────────────────────────────────────────────────────
-
-async function loadMorningProof() {
-  try {
-    const receipt = await api.getLatestReceipt?.();
-    if (receipt) renderMorningProof(receipt);
-  } catch {}
-}
-
-function renderMorningProof(receipt) {
-  if (!receipt || !els.morningProofSection) return;
-  els.morningProofSection.style.display = '';
-
-  // Result badge.
-  const badgeMap = {
-    running: { text: 'RUNNING', color: '#5b8cff', icon: '\u{1F504}' },
-    completing: { text: 'COMPLETING', color: '#d4a50a', icon: '\u23F3' },
-    power_executed: { text: 'COMPLETED', color: '#4caf50', icon: '\u2705' },
-    dry_run_completed: { text: 'DRY RUN', color: '#76c9ff', icon: '\u{1F4CB}' },
-    cancelled: { text: 'CANCELLED', color: '#ff9800', icon: '\u274C' },
-    blocked: { text: 'BLOCKED', color: '#ff4d4d', icon: '\u{1F6AB}' },
-    error: { text: 'ERROR', color: '#ff4d4d', icon: '\u26A0\uFE0F' }
-  };
-  const badge = badgeMap[receipt.result] || { text: receipt.result?.toUpperCase(), color: 'var(--text-muted)', icon: '\u2753' };
-
-  if (els.proofBadge) {
-    els.proofBadge.textContent = badge.text;
-    els.proofBadge.style.color = badge.color;
-    els.proofBadge.style.borderColor = badge.color;
-  }
-  if (els.proofIcon) els.proofIcon.textContent = badge.icon;
-
-  // Body details.
-  if (els.proofBody) {
-    const start = receipt.startedAt ? new Date(receipt.startedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '?';
-    const end = receipt.endedAt ? new Date(receipt.endedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--';
-    const dur = receipt.durationSeconds ? `${Math.floor(receipt.durationSeconds / 60)}m` : '?';
-    const action = receipt.action || '?';
-    const pauses = receipt.pauseCount || 0;
-    const snoozes = receipt.snoozeCount || 0;
-    const warnings = receipt.warningsShown || 0;
-    const dryRun = receipt.dryRun ? ' (Dry Run)' : '';
-    const force = receipt.forceShutdown ? ' / Force' : '';
-
-    els.proofBody.innerHTML = `
-      <div class="proof-row"><span>Action</span><span>${action}${force}${dryRun}</span></div>
-      <div class="proof-row"><span>Duration</span><span>${dur}</span></div>
-      <div class="proof-row"><span>Started</span><span>${start}</span></div>
-      <div class="proof-row"><span>${receipt.result === 'cancelled' ? 'Cancelled' : 'Ended'}</span><span>${end}</span></div>
-      ${pauses ? `<div class="proof-row"><span>Pauses</span><span>${pauses}</span></div>` : ''}
-      ${snoozes ? `<div class="proof-row"><span>Snoozes</span><span>${snoozes}</span></div>` : ''}
-      ${warnings ? `<div class="proof-row"><span>Warnings</span><span>${warnings}</span></div>` : ''}
-      ${receipt.powerCommand ? `<div class="proof-row"><span>Command</span><span class="mono">${receipt.powerCommand}</span></div>` : ''}
-    `;
-  }
-}
-
-// View receipts modal.
-if (els.btnProofDetails) {
-  els.btnProofDetails.addEventListener('click', async () => {
-    try {
-      const [receipts, stats] = await Promise.all([
-        api.listReceipts?.(50),
-        api.getReceiptStats?.()
-      ]);
-      renderReceiptsModal(receipts || [], stats);
-      if (els.receiptsModal) els.receiptsModal.classList.add('active');
-    } catch {}
-  });
-}
-
-if (els.receiptsModalClose) {
-  els.receiptsModalClose.addEventListener('click', () => {
-    if (els.receiptsModal) els.receiptsModal.classList.remove('active');
-  });
-}
-
-// Copy proof to clipboard.
-if (els.btnProofCopy) {
-  els.btnProofCopy.addEventListener('click', async () => {
-    try {
-      const receipt = await api.getLatestReceipt?.();
-      if (!receipt) return;
-      const text = [
-        `Lights Out - Morning Proof`,
-        `Result: ${receipt.result}`,
-        `Action: ${receipt.action}${receipt.forceShutdown ? ' (Force)' : ''}${receipt.dryRun ? ' (Dry Run)' : ''}`,
-        `Duration: ${Math.floor(receipt.durationSeconds / 60)}m`,
-        `Started: ${receipt.startedAt}`,
-        `Ended: ${receipt.endedAt || 'N/A'}`,
-        `Pauses: ${receipt.pauseCount}, Snoozes: ${receipt.snoozeCount}, Warnings: ${receipt.warningsShown}`,
-        receipt.powerCommand ? `Command: ${receipt.powerCommand}` : '',
-        receipt.notes ? `Notes: ${receipt.notes}` : ''
-      ].filter(Boolean).join('\n');
-      await navigator.clipboard.writeText(text);
-      notify('Proof copied to clipboard', 'success');
-    } catch { notify('Copy failed', 'error'); }
-  });
-}
-
-// Clear receipts.
-if (els.btnClearReceipts) {
-  els.btnClearReceipts.addEventListener('click', async () => {
-    try {
-      await api.clearReceipts?.();
-      if (els.receiptsList) els.receiptsList.innerHTML = '<p style="font-size:11px;color:var(--text-muted)">No receipts.</p>';
-      if (els.receiptStats) els.receiptStats.innerHTML = '';
-      notify('All receipts cleared', 'info');
-    } catch {}
-  });
-}
-
-function renderReceiptsModal(receipts, stats) {
-  // Stats.
-  if (els.receiptStats && stats) {
-    els.receiptStats.innerHTML = `
-      <div class="receipt-stat-grid">
-        <div class="receipt-stat"><span class="rs-val">${stats.total}</span><span class="rs-lbl">Total</span></div>
-        <div class="receipt-stat"><span class="rs-val" style="color:#4caf50">${stats.completed}</span><span class="rs-lbl">Completed</span></div>
-        <div class="receipt-stat"><span class="rs-val" style="color:#ff9800">${stats.cancelled}</span><span class="rs-lbl">Cancelled</span></div>
-        <div class="receipt-stat"><span class="rs-val" style="color:#76c9ff">${stats.dryRun}</span><span class="rs-lbl">Dry Runs</span></div>
-        <div class="receipt-stat"><span class="rs-val" style="color:#ff4d4d">${stats.blocked}</span><span class="rs-lbl">Blocked</span></div>
-      </div>
-    `;
-  }
-
-  // Receipts list.
-  if (!els.receiptsList) return;
-  if (!receipts.length) {
-    els.receiptsList.innerHTML = '<p style="font-size:11px;color:var(--text-muted)">No receipts yet. Start a timer to generate proof.</p>';
-    return;
-  }
-  els.receiptsList.innerHTML = receipts.map(r => {
-    const colorMap = { power_executed: '#4caf50', completed: '#4caf50', dry_run_completed: '#76c9ff', cancelled: '#ff9800', running: '#5b8cff', error: '#ff4d4d', blocked: '#ff4d4d' };
-    const c = colorMap[r.result] || 'var(--text-muted)';
-    const start = new Date(r.startedAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-    const dur = Math.floor(r.durationSeconds / 60);
-    return `<div class="receipt-row" style="border-left:3px solid ${c};padding:6px 8px;margin-bottom:4px;border-radius:0 4px 4px 0;background:var(--bg-card)">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:11px;font-weight:600;color:var(--text-primary)">${start}</span>
-        <span style="font-size:10px;font-weight:700;color:${c};text-transform:uppercase">${r.result?.replace(/_/g, ' ')}</span>
-      </div>
-      <div style="font-size:10px;color:var(--text-muted);margin-top:2px">${r.action}${r.dryRun ? ' (dry)' : ''}${r.forceShutdown ? ' /force' : ''} | ${dur}m | ${r.pauseCount || 0}p ${r.snoozeCount || 0}s</div>
-    </div>`;
-  }).join('');
 }  els.btnPlus.addEventListener('click', () => {
     els.timerInput.value = inputValue() + 1;
     setInputFromSeconds(inputSeconds());
@@ -2311,8 +2143,6 @@ async function loadInitialData() {
     loadStreaks();
     // Load sleep debt data
     loadSleepDebt();
-    // Load morning proof / last run receipt
-    loadMorningProof();
 
     els.batteryLevel.textContent = systemInfo.battery === 'N/A' ? 'N/A' : `${systemInfo.battery}%`;
     els.powerPlan.textContent = systemInfo.powerPlan || 'Unknown';

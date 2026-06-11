@@ -203,11 +203,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Emergency Override
   getOverrideConsequences: () => ipcRenderer.invoke('get-override-consequences'),
-  executeOverride: (reason) => ipcRenderer.invoke('execute-override', reason),
-
-  // Run Receipts / Morning Proof
-  getLatestReceipt: () => ipcRenderer.invoke('get-latest-receipt'),
-  listReceipts: (limit) => ipcRenderer.invoke('list-receipts', limit),
-  clearReceipts: () => ipcRenderer.invoke('clear-receipts'),
-  getReceiptStats: () => ipcRenderer.invoke('get-receipt-stats')
+  executeOverride: (reason) => ipcRenderer.invoke('execute-override', reason)
 });
