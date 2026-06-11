@@ -1,8 +1,33 @@
 # Lights Out
 
-A Windows bedtime shutdown ritual app. It opens safely (idle by default), makes
-shutdown intent clear, and only takes stronger actions when you explicitly choose
-them.
+**A clean Windows wind-down and shutdown timer for people who do not want to touch Command Prompt, PowerShell, or Task Scheduler.**
+
+Set a bedtime. Lights Out handles the rest: a calm wind-down, ambient visuals,
+optional smart-light sunrise, and a deliberate shutdown action when the timer
+ends. No surprise countdowns. No hidden force-quits.
+
+### Free because trust comes first
+
+- **No account.** Nothing to sign up for.
+- **No subscription.** The whole app is free.
+- **No ads. No telemetry.** Your data stays on your machine.
+
+Lights Out makes one outbound connection by default: a periodic check against the
+GitHub Releases API for a newer version. It sends no personal data and no usage
+analytics. Smart-light, calendar, and Wi-Fi features only reach out when you set
+them up.
+
+### Proof-backed releases
+
+Every release ships an installer, a portable build, and SHA256 checksums, built
+and published by CI.
+
+- Latest release: https://github.com/Z3r0DayZion-install/lights-out/releases/latest
+- Installer: `Lights Out Setup *.exe`
+- Portable: `LightsOut.exe`
+- Checksums: `SHA256SUMS.txt`
+
+## Surfaces
 
 There are two surfaces in this repo:
 
@@ -27,12 +52,13 @@ full contributor handoff and which runtime owns a given task.
 - **Imminent-action warning** - a grace-period dialog with Snooze / Cancel.
 - **Crash recovery** - an interrupted countdown offers Resume / Dismiss on restart.
 
-## Safe defaults
+## Why it is safe by default
 
-- Opens idle, never auto-starts a countdown.
-- Force shutdown is opt-in (Settings) and otherwise only via the explicitly named
+- Opens idle, never as an instant countdown.
+- Force shutdown is an explicit, clearly named action, never the default. It is
+  opt-in (Settings) or via the explicitly named
   `Lights Out - Force Shutdown Within 1 Hour.bat`.
-- "Run at login" starts minimized and idle.
+- "Run at login" means start minimized and idle, nothing more.
 
 ## Run the Electron app
 
