@@ -1305,12 +1305,19 @@ function renderFamilyPeers(peers) {
   }
   els.familyPeers.innerHTML = peers.map(p => `
     <div class="family-peer" style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bg-card)">
-      <span style="flex:1;font-size:12px">&#x1F5A5; ${p.name || p.ip} <small style="color:var(--text-muted)">${p.ip}</small></span>
-      <button class="btn-tiny" onclick="familyRemote('${p.ip}','start',30)" title="Start 30-min timer">&#x25B6;</button>
-      <button class="btn-tiny" onclick="familyRemote('${p.ip}','pause')" title="Pause">&#x23F8;</button>
-      <button class="btn-tiny" onclick="familyRemote('${p.ip}','cancel')" title="Cancel">&#x274C;</button>
+      <span style="flex:1;font-size:12px">&#x1F5A5; ${escapeHtml(p.name || p.ip)} <small style="color:var(--text-muted)">${escapeHtml(p.ip)}</small></span>
+      <button class="btn-tiny" data-peer-ip="${escapeHtml(p.ip)}" data-peer-action="start" title="Start 30-min timer">&#x25B6;</button>
+      <button class="btn-tiny" data-peer-ip="${escapeHtml(p.ip)}" data-peer-action="pause" title="Pause">&#x23F8;</button>
+      <button class="btn-tiny" data-peer-ip="${escapeHtml(p.ip)}" data-peer-action="cancel" title="Cancel">&#x274C;</button>
     </div>
   `).join('');
+
+  els.familyPeers.querySelectorAll('button[data-peer-action]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const action = btn.dataset.peerAction;
+      familyRemote(btn.dataset.peerIp, action, action === 'start' ? 30 : undefined);
+    });
+  });
 }
 
 window.familyRemote = async function(ip, action, duration) {
@@ -1387,8 +1394,8 @@ function renderWifiDevices(devices) {
     const macSel = wifiSelectedDevices.macs.includes(d.mac);
     const ipSel = wifiSelectedDevices.ips.includes(d.ip);
     const selected = macSel || ipSel;
-    return `<div class="wifi-device${selected ? ' selected' : ''}" data-mac="${d.mac}" data-ip="${d.ip}" style="display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:4px;cursor:pointer;border:1px solid ${selected ? 'var(--accent-cyan)' : 'var(--bg-card)'};margin-bottom:3px;font-size:11px">
-      <span style="flex:1">&#x1F4F1; ${d.mac} <small style="color:var(--text-muted)">${d.ip}</small></span>
+    return `<div class="wifi-device${selected ? ' selected' : ''}" data-mac="${escapeHtml(d.mac)}" data-ip="${escapeHtml(d.ip)}" style="display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:4px;cursor:pointer;border:1px solid ${selected ? 'var(--accent-cyan)' : 'var(--bg-card)'};margin-bottom:3px;font-size:11px">
+      <span style="flex:1">&#x1F4F1; ${escapeHtml(d.mac)} <small style="color:var(--text-muted)">${escapeHtml(d.ip)}</small></span>
       <span style="font-size:9px;color:var(--accent-cyan)">${selected ? 'BLOCKED' : 'click to block'}</span>
     </div>`;
   }).join('');

@@ -156,6 +156,19 @@ function createWindow() {
   mainWindow.miniMode = miniMode;
   mainWindow.loadFile('index.html');
 
+  // Hardening: never open arbitrary content in-app. External http(s) links go
+  // to the default browser; everything else is denied.
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (/^https?:\/\//.test(url)) shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (!url.startsWith('file://')) {
+      event.preventDefault();
+      if (/^https?:\/\//.test(url)) shell.openExternal(url);
+    }
+  });
+
   mainWindow.once('ready-to-show', () => {
     if (launchOptions.minimized) {
       mainWindow.minimize();
