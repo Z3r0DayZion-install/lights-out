@@ -150,9 +150,11 @@ Verified this session on BOTH branches: syntax OK, smoke 41/41, build OK.
 - The app must never change the user's desktop theme.
 
 ## 5. Out of scope / left as-is
-- Untracked, uncommitted helper files left in the working tree (not part of either branch):
-  `electron/assets/v10_*.png`, older `electron/scripts/cdp-capture*.js`,
-  `electron/scripts/test-ambient-global.js`, `electron/scripts/reload-app.js` (unused).
+- Working tree is clean: stale untracked helper junk (old `cdp-capture*.js`,
+  `capture-v10-live.js`, `ui-capture-v10-final.js`, `test-ambient-global.js`,
+  `reload-app.js`, and `electron/assets/v10_*.png`) was removed. The only retained
+  capture tooling is `electron/scripts/polish-capture.js` (on the UI branch), and the
+  before/after evidence in `docs/release/screenshots/polish/`.
 - PowerShell app (`source/`, `modules/`, `SleepTimer.exe`) untouched.
 - App version strings untouched.
 
