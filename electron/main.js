@@ -838,6 +838,16 @@ function sendAccountability(eventType, extra = {}) {
 // Calendar Auto-Start: zero-friction timer from calendar events.
 // ─────────────────────────────────────────────────────────────────────────────
 
+// Only auto-start for events that are clearly Lights Out / bedtime events.
+// Matches title containing these keywords (case-insensitive).
+const AUTO_START_KEYWORDS = ['lights out', 'bedtime', 'wind down', 'shutdown', 'sleep timer', 'goodnight', 'lights off'];
+
+function isBedtimeEvent(event) {
+  const title = (event.title || '').toLowerCase();
+  // Must contain a keyword to qualify.
+  return AUTO_START_KEYWORDS.some(kw => title.includes(kw));
+}
+
 async function checkCalendarAutoStart() {
   const calSettings = settingsStore.getSection('calendar') || {};
   if (!calSettings.enabled || !calSettings.autoStartFromEvents) return;
@@ -849,6 +859,7 @@ async function checkCalendarAutoStart() {
 
     const now = new Date();
     for (const event of events) {
+      if (!isBedtimeEvent(event)) continue; // skip non-bedtime events
       const start = new Date(event.start);
       const diffMin = (start - now) / 60000;
       // If event starts within the next 2 minutes, auto-start.
@@ -860,7 +871,7 @@ async function checkCalendarAutoStart() {
         break;
       }
     }
-  } catch { /* best effort */ }
+  } catch { /* best effort - calendar offline does not crash app */ }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

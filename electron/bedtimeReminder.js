@@ -10,7 +10,9 @@ let onReminderCallback = null;
 
 // Start checking if it's almost bedtime.
 function startReminder(options = {}) {
-  reminderMinutesBefore = options.minutesBefore || 15;
+  // Read persisted settings if no override.
+  const appSettings = getAppSettings();
+  reminderMinutesBefore = options.minutesBefore || appSettings.bedtimeReminderMinutes || 15;
   onReminderCallback = options.onReminder || null;
 
   if (reminderInterval) clearInterval(reminderInterval);
@@ -61,8 +63,17 @@ function getBedtimeFromSettings() {
   try {
     const settingsStore = require('./settings');
     const app = settingsStore.getSection('app') || {};
+    // Don't remind if disabled.
+    if (app.bedtimeReminderEnabled === false) return null;
     return app.bedtime || null;
   } catch { return null; }
+}
+
+function getAppSettings() {
+  try {
+    const settingsStore = require('./settings');
+    return settingsStore.getSection('app') || {};
+  } catch { return {}; }
 }
 
 function showNativeNotification(title, body) {

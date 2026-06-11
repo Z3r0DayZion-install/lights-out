@@ -2455,6 +2455,10 @@ function applyAppSettings(app) {
     setInputFromSeconds(state.remainingSeconds);
   }
   setAction(state.action);
+  // Restore persisted toggle states for new features.
+  if (els.chkIdleDetect) els.chkIdleDetect.checked = !!app.idleDetectionEnabled;
+  if (els.chkBedtimeReminder) els.chkBedtimeReminder.checked = app.bedtimeReminderEnabled !== false;
+  if (els.chkCalendarAutostart) els.chkCalendarAutostart.checked = !!app.calendarAutoStart;
 }
 
 function collectWifiGuardSettings() {
@@ -2645,12 +2649,22 @@ function setupCustomizeHandlers() {
   });
   els.chkIdleDetect?.addEventListener('change', () => {
     api.setIdleThreshold?.(els.chkIdleDetect.checked ? 300 : 0);
+    // Persist to settings.
+    const app = api.getAppSettings?.() || {};
+    app.idleDetectionEnabled = els.chkIdleDetect.checked;
+    api.saveAppSettings?.({ app });
   });
   els.chkBedtimeReminder?.addEventListener('change', () => {
     api.setBedtimeReminder?.(els.chkBedtimeReminder.checked ? 15 : 0);
+    const app = api.getAppSettings?.() || {};
+    app.bedtimeReminderEnabled = els.chkBedtimeReminder.checked;
+    api.saveAppSettings?.({ app });
   });
   els.chkCalendarAutostart?.addEventListener('change', () => {
     api.setCalendarAutoStart?.(els.chkCalendarAutostart.checked);
+    const app = api.getAppSettings?.() || {};
+    app.calendarAutoStart = els.chkCalendarAutostart.checked;
+    api.saveAppSettings?.({ app });
   });
 }
 

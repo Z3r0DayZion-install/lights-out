@@ -25,7 +25,12 @@ const DEFAULTS = {
     focusBlocklist: [],
     onboarded: false,
     bedtime: '22:30',
-    timerName: 'Witching Hour'
+    timerName: 'Witching Hour',
+    bedtimeReminderEnabled: true,
+    bedtimeReminderMinutes: 15,
+    idleDetectionEnabled: false,
+    idleThresholdSeconds: 300,
+    calendarAutoStart: false
   },
   calendar: {
     enabled: true,
