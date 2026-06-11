@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, Notification, globalShortcut, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, Notification, globalShortcut, shell, screen } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const smartLights = require('./smartLights');
@@ -644,23 +644,23 @@ function playLastLightRitual(dryRun) {
 // Enables Windows Night Light (blue-light filter) via registry if the
 // customization setting is on, and tells the renderer to warm the UI.
 function applyDimPhase(remainingSeconds, totalSeconds) {
-  const custom = settingsStore.getSection('customization') || {};
-  if (custom.warmShift !== false) {
+  const appSettings = settingsStore.getSection('app') || {};
+  if (appSettings.nightLightOnDim === true) {
     // Enable Windows Night Light (blue-light filter) during dim phase.
     executePowerShell(
       'Set-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\CloudStore\\Store\\DefaultAccount\\Current\\default$windows.data.bluelightreduction\\windows.data.bluelightreduction.bluelightreductionstate" -Name "Data" -Value ([byte[]](2,0,0,0) ) -ErrorAction SilentlyContinue'
     ).catch(() => { /* Night Light registry path may not exist on all systems */ });
   }
-  // Enable Windows dark mode (system-wide) during wind-down.
-  applyNightMode(true);
   // Focus mode: close distracting apps during dim phase.
   applyFocusMode(true);
   // Media auto-pause: pause detected media players during dim phase.
-  media.pauseAllDetectedMedia().then(result => {
-    if (result.count > 0 && mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('media-paused', { players: result.paused });
-    }
-  }).catch(() => {});
+  if (appSettings.pauseMediaOnDim === true) {
+    media.pauseAllDetectedMedia().then(result => {
+      if (result.count > 0 && mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('media-paused', { players: result.paused });
+      }
+    }).catch(() => {});
+  }
   // WiFi Guard: block internet for kids during dim phase.
   const wifiConfig = settingsStore.getSection('wifiGuard');
   if (wifiConfig && wifiConfig.enabled && wifiConfig.blockOnDim !== false) {
@@ -681,7 +681,7 @@ function applyDimPhase(remainingSeconds, totalSeconds) {
     }).catch(() => {});
   }
   // Progressive screen lockout: make window always-on-top and hide menu during dim.
-  if (mainWindow && !mainWindow.isDestroyed()) {
+  if (appSettings.lockoutOnDim === true && mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.setAlwaysOnTop(true, 'floating');
     mainWindow.setMenuBarVisibility(false);
   }
@@ -706,26 +706,11 @@ function applyFocusMode(enable) {
   // On disable, we don't restart the apps (the user will reopen what they need).
 }
 
-function applyNightMode(enable) {
-  const val = enable ? 0 : 1; // 0 = dark, 1 = light (AppsUseLightTheme)
-  const cmds = [
-    // System apps theme
-    `Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize' -Name 'AppsUseLightTheme' -Value ${val} -Type DWord -ErrorAction SilentlyContinue`,
-    // System theme
-    `Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize' -Name 'SystemUsesLightTheme' -Value ${val} -Type DWord -ErrorAction SilentlyContinue`
-  ];
-  for (const cmd of cmds) {
-    executePowerShell(cmd).catch(() => {});
-  }
-}
-
 function restoreAfterTimer() {
   // Restore window opacity.
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setOpacity(1);
   // Tell renderer to end dim phase.
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('dim-phase-ended');
-  // Restore Windows light theme.
-  applyNightMode(false);
   // Disable Windows Night Light (restore original state).
   executePowerShell(
     'Remove-ItemProperty -Path "HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\CloudStore\\Store\\DefaultAccount\\Current\\default$windows.data.bluelightreduction\\windows.data.bluelightreduction.bluelightreductionstate" -Name "Data" -ErrorAction SilentlyContinue'
@@ -1611,6 +1596,20 @@ ipcMain.on('open-external', (event, url) => {
   if (typeof url === 'string' && /^https?:\/\//.test(url)) {
     shell.openExternal(url);
   }
+});
+
+// Auto-fit the window height to the renderer's content (idle/full view only),
+// clamped to a sensible floor and the current display's work area.
+ipcMain.on('fit-window-height', (event, contentHeight) => {
+  if (!mainWindow || mainWindow.isDestroyed() || mainWindow.miniMode) return;
+  if (mainWindow.isMaximized() || mainWindow.isFullScreen()) return;
+  const desired = Math.round(Number(contentHeight) || 0);
+  if (desired < 200) return;
+  const [w, curH] = mainWindow.getContentSize();
+  const work = screen.getDisplayMatching(mainWindow.getBounds()).workArea;
+  const maxH = Math.max(600, work.height - 48);
+  const target = Math.max(600, Math.min(desired, maxH));
+  if (Math.abs(curH - target) > 2) mainWindow.setContentSize(w, target);
 });
 
 function setupJumpList() {

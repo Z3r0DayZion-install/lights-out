@@ -332,6 +332,9 @@ const els = {
   chkIdleDetect: document.getElementById('chk-idle-detect'),
   chkBedtimeReminder: document.getElementById('chk-bedtime-reminder'),
   chkCalendarAutostart: document.getElementById('chk-calendar-autostart'),
+  chkNightlightDim: document.getElementById('chk-nightlight-dim'),
+  chkPauseMediaDim: document.getElementById('chk-pausemedia-dim'),
+  chkLockoutDim: document.getElementById('chk-lockout-dim'),
   ambientCanvas: document.getElementById('ambient-canvas'),
   btnResetCustomize: document.getElementById('btn-reset-customize'),
   // Last Light elements
@@ -973,11 +976,14 @@ function render() {
   els.actionName.textContent = actionLabel();
   els.endTime.textContent = state.running || state.paused ? formatEndTime(state.endsAt) : 'Idle';
 
-  if (els.chkDryRun) els.chkDryRun.checked = state.dryRun;
-  if (els.chkForceShutdown) els.chkForceShutdown.checked = state.forceShutdown;
-  if (els.chkMute) els.chkMute.checked = state.muteSystem;
-  if (els.chkRunLogin) els.chkRunLogin.checked = state.runAtLogin;
-  if (els.graceMinutes) els.graceMinutes.value = state.graceMinutes;
+  // Don't clobber the user's in-progress edits while the options modal is open.
+  if (!els.optionsModal?.classList.contains('active')) {
+    if (els.chkDryRun) els.chkDryRun.checked = state.dryRun;
+    if (els.chkForceShutdown) els.chkForceShutdown.checked = state.forceShutdown;
+    if (els.chkMute) els.chkMute.checked = state.muteSystem;
+    if (els.chkRunLogin) els.chkRunLogin.checked = state.runAtLogin;
+    if (els.graceMinutes) els.graceMinutes.value = state.graceMinutes;
+  }
 
   document.querySelectorAll('.tonight-card').forEach(card => {
     card.classList.toggle('selected', card.dataset.card === state.selectedCard);
@@ -1939,6 +1945,8 @@ function renderReceiptsModal(receipts, stats) {
         }
         if (item.id === 'toggle-graceful') state.gracefulClose = !state.gracefulClose;
         render();
+        // Persist these quick toggles so they survive a relaunch.
+        api.saveAppSettings({ app: collectAppSettings() });
         return;
       }
 
@@ -2441,7 +2449,10 @@ function collectAppSettings() {
     muteSystem: state.muteSystem,
     graceMinutes: state.graceMinutes,
     dryRun: state.dryRun,
-    focusBlocklist
+    focusBlocklist,
+    nightLightOnDim: els.chkNightlightDim?.checked || false,
+    pauseMediaOnDim: els.chkPauseMediaDim?.checked || false,
+    lockoutOnDim: els.chkLockoutDim?.checked || false
   };
 }
 
@@ -2467,6 +2478,9 @@ function applyAppSettings(app) {
   if (els.chkIdleDetect) els.chkIdleDetect.checked = !!app.idleDetectionEnabled;
   if (els.chkBedtimeReminder) els.chkBedtimeReminder.checked = app.bedtimeReminderEnabled !== false;
   if (els.chkCalendarAutostart) els.chkCalendarAutostart.checked = !!app.calendarAutoStart;
+  if (els.chkNightlightDim) els.chkNightlightDim.checked = !!app.nightLightOnDim;
+  if (els.chkPauseMediaDim) els.chkPauseMediaDim.checked = !!app.pauseMediaOnDim;
+  if (els.chkLockoutDim) els.chkLockoutDim.checked = !!app.lockoutOnDim;
 }
 
 function collectWifiGuardSettings() {
@@ -3802,3 +3816,50 @@ function renderCalendarEvents() {
 }
 
 checkOnboarding();
+
+// ───────────── Auto-fit window height to content ─────────────
+// Keeps the window sized to what is actually shown (no dead space, no forced
+// scroll) within a sensible floor and the display work area. Electron only.
+(function setupAutoFitWindow() {
+  if (!window.electronAPI || typeof window.electronAPI.fitWindowHeight !== 'function') return;
+
+  const measure = () => {
+    const header = document.querySelector('.chrome-header');
+    const dashboard = document.querySelector('.dashboard');
+    const footer = document.querySelector('.app-footer');
+    if (!dashboard) return 0;
+    const ds = getComputedStyle(dashboard);
+    const gap = parseFloat(ds.rowGap || ds.gap || '0') || 0;
+    let inner = (parseFloat(ds.paddingTop) || 0) + (parseFloat(ds.paddingBottom) || 0);
+    let visible = 0;
+    for (const child of dashboard.children) {
+      if (getComputedStyle(child).display === 'none') continue;
+      inner += child.offsetHeight;
+      visible++;
+    }
+    if (visible > 1) inner += gap * (visible - 1);
+    return Math.ceil((header ? header.offsetHeight : 0) + inner + (footer ? footer.offsetHeight : 0));
+  };
+
+  let scheduled = false;
+  const fit = () => {
+    if (scheduled || document.body.classList.contains('mini-mode')) return;
+    scheduled = true;
+    requestAnimationFrame(() => {
+      scheduled = false;
+      const h = measure();
+      if (h > 0) window.electronAPI.fitWindowHeight(h);
+    });
+  };
+
+  const dashboard = document.querySelector('.dashboard');
+  if (dashboard && 'MutationObserver' in window) {
+    let debounce = null;
+    const obs = new MutationObserver(() => {
+      clearTimeout(debounce);
+      debounce = setTimeout(fit, 120);
+    });
+    obs.observe(dashboard, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class', 'hidden'] });
+  }
+  setTimeout(fit, 150);
+})();

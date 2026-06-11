@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   quitApp: () => ipcRenderer.send('quit-app'),
   toggleMiniMode: () => ipcRenderer.send('toggle-mini-mode'),
   setWindowOpacity: (value) => ipcRenderer.send('set-window-opacity', value),
+  fitWindowHeight: (height) => ipcRenderer.send('fit-window-height', height),
   
   // Notifications & sounds
   showNotification: (title, body) => ipcRenderer.send('show-notification', title, body),

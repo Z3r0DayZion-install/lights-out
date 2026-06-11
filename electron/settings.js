@@ -30,7 +30,11 @@ const DEFAULTS = {
     bedtimeReminderMinutes: 15,
     idleDetectionEnabled: false,
     idleThresholdSeconds: 300,
-    calendarAutoStart: false
+    calendarAutoStart: false,
+    // Wind-down system actions. Default OFF so the app never touches the OS unasked.
+    nightLightOnDim: false,
+    pauseMediaOnDim: false,
+    lockoutOnDim: false
   },
   calendar: {
     enabled: true,
