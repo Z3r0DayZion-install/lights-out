@@ -317,6 +317,7 @@
           <button class="tab-btn active" data-tab="library">Library</button>
           <button class="tab-btn" data-tab="schedule">Schedule</button>
           <button class="tab-btn" data-tab="clock">Clock</button>
+          <button class="tab-btn" data-tab="focus">Focus</button>
           <button class="tab-btn" data-tab="countdown">Countdown</button>
           <button class="tab-btn" data-tab="streaks">Streaks</button>
         </div>
@@ -460,6 +461,51 @@
               <button class="clock-btn" data-time="00:00">12:00 AM</button>
             </div>
           </div>
+          <div class="tab-panel" id="tab-focus">
+            <div class="focus-panel">
+              <div class="focus-hero">
+                <div class="focus-icon">&#x1F3AF;</div>
+                <h3>Focus Session</h3>
+                <p style="font-size:11px;color:var(--text-muted);margin:4px 0 12px">Pomodoro-style deep work. Same ring, same sounds.</p>
+              </div>
+              <div class="focus-presets">
+                <button class="focus-preset-btn" data-preset="pomodoro">
+                  <span class="fp-name">Pomodoro</span>
+                  <span class="fp-detail">25/5 min</span>
+                </button>
+                <button class="focus-preset-btn" data-preset="deep">
+                  <span class="fp-name">Deep Work</span>
+                  <span class="fp-detail">50/10 min</span>
+                </button>
+                <button class="focus-preset-btn" data-preset="sprint">
+                  <span class="fp-name">Sprint</span>
+                  <span class="fp-detail">15/3 min</span>
+                </button>
+              </div>
+              <div class="focus-active" id="focus-active" style="display:none">
+                <div class="focus-ring-wrap">
+                  <div class="focus-ring" id="focus-ring">
+                    <span class="focus-ring-remaining" id="focus-remaining">25:00</span>
+                  </div>
+                  <span class="focus-phase-label" id="focus-phase-label">Focus</span>
+                </div>
+                <div class="focus-cycle-dots" id="focus-cycle-dots"></div>
+                <div class="focus-controls">
+                  <button class="btn-secondary" id="btn-focus-pause">Pause</button>
+                  <button class="btn-secondary" id="btn-focus-stop" style="border-color:var(--accent-amber)">Stop</button>
+                </div>
+              </div>
+              <!-- Sleep Debt -->
+              <div class="sleep-debt-section" id="sleep-debt-section" style="margin-top:16px">
+                <h4 style="font-size:12px;color:var(--text-secondary);margin-bottom:8px">&#x1F4B8; Sleep Debt</h4>
+                <div class="debt-display" id="debt-display">
+                  <span class="debt-amount" id="debt-amount">0.0h</span>
+                  <span class="debt-label" id="debt-label">No debt</span>
+                </div>
+                <div class="debt-week" id="debt-week"></div>
+              </div>
+            </div>
+          </div>
           <div class="tab-panel" id="tab-countdown">
             <div class="countdown-presets">
               <button class="cd-btn" data-hours="1">1 Hour</button>
@@ -532,7 +578,7 @@
         <button class="footer-action" id="btn-widget" title="Desktop widget">&#x1F4CA;</button>
         <button class="footer-action" id="btn-companion" title="Companion PWA">&#x1F4F1;</button>
         <span class="badge update-badge" id="badge-update" style="display:none" title="Update available">UPDATE</span>
-        <span id="version">v9.0.0</span>
+        <span id="version">v9.1.0</span>
       </div>
     </footer>
 
@@ -1099,6 +1145,27 @@
         <button class="btn-primary" id="warning-snooze">Snooze +5 min</button>
         <button class="btn-danger" id="warning-cancel">Cancel timer</button>
         <button class="btn-secondary" id="warning-dismiss">Dismiss</button>
+        <button class="btn-secondary" id="warning-override" style="border-color:#ff4d4d;color:#ff4d4d;margin-top:4px">Emergency Override</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Emergency Override Modal -->
+  <div class="modal override-modal" id="override-modal">
+    <div class="modal-content override-modal-content">
+      <div class="override-header">
+        <span class="override-icon">&#x1F6AB;</span>
+        <h2>Emergency Override</h2>
+        <p style="font-size:11px;color:var(--text-muted)">You CAN stay up, but it costs.</p>
+      </div>
+      <div class="override-consequences" id="override-consequences"></div>
+      <div class="override-reason">
+        <label style="font-size:11px;color:var(--text-secondary)">Why are you staying up?</label>
+        <input type="text" id="override-reason-input" placeholder="Type your reason..." style="width:100%">
+      </div>
+      <div class="override-actions">
+        <button class="btn-danger" id="btn-override-confirm">Override (I accept the consequences)</button>
+        <button class="btn-primary" id="btn-override-cancel">Never mind, wind down</button>
       </div>
     </div>
   </div>

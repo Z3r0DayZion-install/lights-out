@@ -17,6 +17,10 @@ const family = require('./family');
 const wifiGuard = require('./wifiGuard');
 const contentBlocker = require('./contentBlocker');
 const accountability = require('./accountability');
+const focusSessions = require('./focusSessions');
+const screenTime = require('./screenTime');
+const sleepDebt = require('./sleepDebt');
+const emergencyOverride = require('./emergencyOverride');
 
 const APP_ICON = path.join(__dirname, 'assets', 'icon.ico');
 
@@ -408,6 +412,13 @@ function startTimer(input, legacyAction) {
   timerState.phase = 'focus';
 
   emitTimerUpdate('started');
+  // Send screen time reality check to renderer.
+  screenTime.getScreenTimeToday().then(st => {
+    const msg = screenTime.getRealityCheckMessage(st);
+    if (msg && mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('reality-check', { message: msg, screenTime: st });
+    }
+  }).catch(() => {});
   // Accountability: notify partner that wind-down started.
   sendAccountability('TIMER_STARTED');
   persistActiveTimer();
@@ -543,6 +554,13 @@ async function completeTimer() {
   // Record a streak event for the completed ritual.
   try { streaks.recordEvent(null, timerState.action, false); } catch {}
   sendAccountability('TIMER_COMPLETE');
+  // Record sleep debt for tonight.
+  try {
+    const appSettings = settingsStore.getSection('app') || {};
+    const bedTime = new Date().toTimeString().slice(0, 5);
+    const estimated = sleepDebt.estimateSleepHours(bedTime, appSettings.wakeTime || '07:00');
+    sleepDebt.recordNight(bedTime, appSettings.wakeTime || '07:00', estimated);
+  } catch {}
 
   // Unsaved work guardian: check for unsaved work before power action.
   if (!timerState.dryRun) {
@@ -1166,6 +1184,53 @@ ipcMain.handle('get-accountability-settings', async () => {
 ipcMain.handle('test-accountability-partner', async (e, partner) => {
   return accountability.testPartner(partner);
 });
+
+// Focus Sessions IPC.
+ipcMain.handle('focus-start', async (e, preset, customConfig) => {
+  return focusSessions.startFocusSession(preset, customConfig);
+});
+ipcMain.handle('focus-pause', async () => {
+  return focusSessions.pauseFocusSession();
+});
+ipcMain.handle('focus-resume', async () => {
+  return focusSessions.resumeFocusSession();
+});
+ipcMain.handle('focus-stop', async () => {
+  return focusSessions.stopFocusSession();
+});
+ipcMain.handle('focus-state', async () => {
+  return focusSessions.getFocusState();
+});
+
+// Screen Time IPC.
+ipcMain.handle('get-screen-time', async () => {
+  try { return await screenTime.getScreenTimeToday(); } catch { return null; }
+});
+ipcMain.handle('get-reality-check', async () => {
+  try {
+    const st = await screenTime.getScreenTimeToday();
+    return screenTime.getRealityCheckMessage(st);
+  } catch { return null; }
+});
+
+// Sleep Debt IPC.
+ipcMain.handle('get-sleep-debt', async () => {
+  try { return sleepDebt.getDebtSummary(); } catch { return null; }
+});
+ipcMain.handle('set-sleep-target', async (e, hours) => {
+  return sleepDebt.setTargetHours(hours);
+});
+ipcMain.handle('set-wake-time', async (e, time) => {
+  return sleepDebt.setWakeTime(time);
+});
+
+// Emergency Override IPC.
+ipcMain.handle('get-override-consequences', async () => {
+  return emergencyOverride.getOverrideConsequences(timerState);
+});
+ipcMain.handle('execute-override', async (e, reason) => {
+  return emergencyOverride.executeOverride(reason, timerState);
+});
 ipcMain.handle('resume-recoverable-timer', async () => {
   const snapshot = getRecoverableTimer();
   if (!snapshot) return { success: false };
@@ -1595,6 +1660,30 @@ app.whenReady().then(async () => {
         if (timerState.running) cancelTimer();
         break;
     }
+  });
+
+  // Focus Sessions: forward ticks and phase changes to renderer.
+  focusSessions.onTick((fs) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('focus-tick', fs);
+    }
+  });
+  focusSessions.onPhase((phase, fs) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('focus-phase', { phase, ...fs });
+    }
+    // Play sound on phase transitions.
+    if (phase === 'break' || phase === 'longbreak') {
+      showNativeNotification('Focus Session', 'Break time! Rest your eyes.');
+    } else if (phase === 'focus') {
+      showNativeNotification('Focus Session', 'Focus time! Get back to work.');
+    }
+  });
+  focusSessions.onComplete((fs) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('focus-complete', fs);
+    }
+    showNativeNotification('Focus Session', `All cycles done! ${Math.round(fs.totalFocusTime / 60)} min of deep work.`);
   });
 
   app.on('activate', () => {

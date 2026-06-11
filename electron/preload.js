@@ -179,5 +179,29 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Accountability
   saveAccountabilitySettings: (s) => ipcRenderer.invoke('save-accountability-settings', s),
   getAccountabilitySettings: () => ipcRenderer.invoke('get-accountability-settings'),
-  testAccountabilityPartner: (p) => ipcRenderer.invoke('test-accountability-partner', p)
+  testAccountabilityPartner: (p) => ipcRenderer.invoke('test-accountability-partner', p),
+
+  // Focus Sessions
+  focusStart: (preset, custom) => ipcRenderer.invoke('focus-start', preset, custom),
+  focusPause: () => ipcRenderer.invoke('focus-pause'),
+  focusResume: () => ipcRenderer.invoke('focus-resume'),
+  focusStop: () => ipcRenderer.invoke('focus-stop'),
+  focusState: () => ipcRenderer.invoke('focus-state'),
+  onFocusTick: (cb) => ipcRenderer.on('focus-tick', (e, data) => cb(data)),
+  onFocusPhase: (cb) => ipcRenderer.on('focus-phase', (e, data) => cb(data)),
+  onFocusComplete: (cb) => ipcRenderer.on('focus-complete', (e, data) => cb(data)),
+
+  // Screen Time
+  getScreenTime: () => ipcRenderer.invoke('get-screen-time'),
+  getRealityCheck: () => ipcRenderer.invoke('get-reality-check'),
+  onRealityCheck: (cb) => ipcRenderer.on('reality-check', (e, data) => cb(data)),
+
+  // Sleep Debt
+  getSleepDebt: () => ipcRenderer.invoke('get-sleep-debt'),
+  setSleepTarget: (h) => ipcRenderer.invoke('set-sleep-target', h),
+  setWakeTime: (t) => ipcRenderer.invoke('set-wake-time', t),
+
+  // Emergency Override
+  getOverrideConsequences: () => ipcRenderer.invoke('get-override-consequences'),
+  executeOverride: (reason) => ipcRenderer.invoke('execute-override', reason)
 });

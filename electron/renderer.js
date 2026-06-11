@@ -166,6 +166,22 @@ const fallbackApi = (() => {
       notifyOnComplete: true, partners: []
     }),
     testAccountabilityPartner: async () => ({ success: true }),
+    focusStart: async () => ({}),
+    focusPause: async () => ({}),
+    focusResume: async () => ({}),
+    focusStop: async () => ({}),
+    focusState: async () => ({ active: false, preset: 'pomodoro', cycle: 0, remainingSeconds: 0 }),
+    onFocusTick: (cb) => {},
+    onFocusPhase: (cb) => {},
+    onFocusComplete: (cb) => {},
+    getScreenTime: async () => null,
+    getRealityCheck: async () => null,
+    onRealityCheck: (cb) => {},
+    getSleepDebt: async () => null,
+    setSleepTarget: async () => 8,
+    setWakeTime: async () => '07:00',
+    getOverrideConsequences: async () => ({ allowed: true, consequences: [] }),
+    executeOverride: async () => ({ overridden: true }),
     addCustomSequence: async () => null,
     removeCustomSequence: async () => ({ success: true }),
     getOpenBrowsers: async () => [],
@@ -317,6 +333,7 @@ const els = {
   warningSnooze: document.getElementById('warning-snooze'),
   warningCancel: document.getElementById('warning-cancel'),
   warningDismiss: document.getElementById('warning-dismiss'),
+  warningOverride: document.getElementById('warning-override'),
   // Status pill
   statusPill: document.getElementById('status-pill'),
   statusDot: document.getElementById('status-dot'),
@@ -399,6 +416,27 @@ const els = {
   breathingInstruction: document.getElementById('breathing-instruction'),
   breathingCycles: document.getElementById('breathing-cycles'),
   btnBreathingStop: document.getElementById('btn-breathing-stop'),
+
+  // Focus Sessions
+  focusActive: document.getElementById('focus-active'),
+  focusRing: document.getElementById('focus-ring'),
+  focusRemaining: document.getElementById('focus-remaining'),
+  focusPhaseLabel: document.getElementById('focus-phase-label'),
+  focusCycleDots: document.getElementById('focus-cycle-dots'),
+  btnFocusPause: document.getElementById('btn-focus-pause'),
+  btnFocusStop: document.getElementById('btn-focus-stop'),
+
+  // Sleep Debt
+  debtAmount: document.getElementById('debt-amount'),
+  debtLabel: document.getElementById('debt-label'),
+  debtWeek: document.getElementById('debt-week'),
+
+  // Emergency Override
+  overrideModal: document.getElementById('override-modal'),
+  overrideConsequences: document.getElementById('override-consequences'),
+  overrideReasonInput: document.getElementById('override-reason-input'),
+  btnOverrideConfirm: document.getElementById('btn-override-confirm'),
+  btnOverrideCancel: document.getElementById('btn-override-cancel'),
   // Status pill
   statusPill: document.getElementById('status-pill'),
   statusDot: document.getElementById('status-dot'),
@@ -1457,6 +1495,173 @@ function stopGuidedBreathing() {
 
 if (els.btnBreathingStop) {
   els.btnBreathingStop.addEventListener('click', stopGuidedBreathing);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Focus Sessions: Pomodoro-style deep work
+// ─────────────────────────────────────────────────────────────────────────────
+
+document.querySelectorAll('.focus-preset-btn').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    const preset = btn.dataset.preset;
+    const result = await api.focusStart?.(preset);
+    if (result) {
+      renderFocusSession(result);
+      notify(`Focus session started: ${preset}`, 'info');
+    }
+  });
+});
+
+if (els.btnFocusPause) {
+  els.btnFocusPause.addEventListener('click', async () => {
+    const state = await api.focusState?.();
+    if (state?.paused) {
+      await api.focusResume?.();
+      els.btnFocusPause.textContent = 'Pause';
+    } else {
+      await api.focusPause?.();
+      els.btnFocusPause.textContent = 'Resume';
+    }
+  });
+}
+
+if (els.btnFocusStop) {
+  els.btnFocusStop.addEventListener('click', async () => {
+    await api.focusStop?.();
+    if (els.focusActive) els.focusActive.style.display = 'none';
+    notify('Focus session ended', 'info');
+  });
+}
+
+api.onFocusTick?.(fs => {
+  renderFocusSession(fs);
+});
+
+api.onFocusPhase?.(data => {
+  renderFocusSession(data);
+  const labels = { focus: 'Focus', break: 'Break', longbreak: 'Long Break' };
+  notify(`${labels[data.phase] || data.phase} phase`, 'info');
+});
+
+api.onFocusComplete?.(fs => {
+  if (els.focusActive) els.focusActive.style.display = 'none';
+  notify(`All done! ${Math.round(fs.totalFocusTime / 60)} min of deep work.`, 'success');
+});
+
+function renderFocusSession(fs) {
+  if (!fs || !els.focusActive) return;
+  els.focusActive.style.display = '';
+  const min = Math.floor(fs.remainingSeconds / 60);
+  const sec = fs.remainingSeconds % 60;
+  if (els.focusRemaining) els.focusRemaining.textContent = `${min}:${String(sec).padStart(2, '0')}`;
+  const phaseLabels = { focus: 'Focus', break: 'Break', longbreak: 'Long Break' };
+  if (els.focusPhaseLabel) els.focusPhaseLabel.textContent = phaseLabels[fs.inBreak ? 'break' : fs.inLongBreak ? 'longbreak' : 'focus'];
+
+  // Cycle dots.
+  if (els.focusCycleDots) {
+    const dots = [];
+    for (let i = 0; i < fs.totalCycles; i++) {
+      const done = i < fs.completedCycles;
+      const active = i === fs.cycle && !fs.inBreak && !fs.inLongBreak;
+      dots.push(`<span class="cycle-dot${done ? ' done' : ''}${active ? ' active' : ''}">${done ? '\u2713' : '\u25CB'}</span>`);
+    }
+    els.focusCycleDots.innerHTML = dots.join('');
+  }
+
+  // Ring color by phase.
+  if (els.focusRing) {
+    els.focusRing.classList.remove('focus-phase', 'break-phase');
+    if (fs.inBreak || fs.inLongBreak) els.focusRing.classList.add('break-phase');
+    else els.focusRing.classList.add('focus-phase');
+  }
+}
+
+// Load sleep debt on init.
+async function loadSleepDebt() {
+  try {
+    const debt = await api.getSleepDebt?.();
+    if (debt) renderSleepDebt(debt);
+  } catch {}
+}
+
+function renderSleepDebt(debt) {
+  if (!debt) return;
+  const label = debt.netDebt <= 0 ? 'Sleep Rich' :
+    debt.netDebt <= 2 ? 'Slight Deficit' :
+    debt.netDebt <= 5 ? 'In Debt' :
+    debt.netDebt <= 10 ? 'Deep Debt' : 'Critical';
+  const colors = { 'Sleep Rich': '#4caf50', 'Slight Deficit': '#8bc34a', 'In Debt': '#ff9800', 'Deep Debt': '#ff5722', 'Critical': '#ff4d4d' };
+  if (els.debtAmount) {
+    els.debtAmount.textContent = `${debt.netDebt > 0 ? '+' : ''}${debt.netDebt}h`;
+    els.debtAmount.style.color = colors[label] || 'var(--text-primary)';
+  }
+  if (els.debtLabel) els.debtLabel.textContent = label;
+  if (els.debtWeek) {
+    const days = debt.dailyLog || [];
+    els.debtWeek.innerHTML = days.length ? days.map(d => {
+      const dayLabel = new Date(d.date + 'T12:00:00').toLocaleDateString('en', { weekday: 'short' });
+      const barW = Math.min(100, Math.abs(d.debt || d.surplus || 0) / debt.targetHours * 100);
+      const isDebt = (d.debt || 0) > 0;
+      return `<div class="debt-day" style="display:flex;align-items:center;gap:4px;font-size:10px">
+        <span style="width:28px;color:var(--text-muted)">${dayLabel}</span>
+        <div style="flex:1;height:4px;background:var(--bg-card);border-radius:2px;overflow:hidden">
+          <div style="width:${barW}%;height:100%;background:${isDebt ? '#ff9800' : '#4caf50'};border-radius:2px"></div>
+        </div>
+        <span style="width:36px;color:${isDebt ? '#ff9800' : '#4caf50'}">${isDebt ? '-' : '+'}${isDebt ? d.debt?.toFixed(1) : d.surplus?.toFixed(1)}h</span>
+      </div>`;
+    }).join('') : '<p style="font-size:10px;color:var(--text-muted)">No data yet</p>';
+  }
+}
+
+// Reality check notification.
+api.onRealityCheck?.(data => {
+  if (data?.message) notify(data.message, 'warning', 8000);
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Emergency Override: stay up but it costs
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function showOverrideModal() {
+  try {
+    const consequences = await api.getOverrideConsequences?.();
+    if (!consequences || !consequences.consequences?.length) return;
+
+    if (els.overrideConsequences) {
+      els.overrideConsequences.innerHTML = consequences.consequences.map(c => `
+        <div class="override-consequence" style="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--bg-card)">
+          <span style="font-size:18px">${c.icon}</span>
+          <div>
+            <span style="font-size:12px;color:var(--text-primary)">${c.message}</span>
+            <span style="font-size:9px;color:${c.severity === 'high' ? '#ff4d4d' : 'var(--text-muted)'};display:block;margin-top:2px">${c.severity.toUpperCase()}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+    if (els.overrideModal) els.overrideModal.classList.add('active');
+    if (els.overrideReasonInput) els.overrideReasonInput.value = '';
+  } catch {}
+}
+
+function hideOverrideModal() {
+  if (els.overrideModal) els.overrideModal.classList.remove('active');
+}
+
+if (els.btnOverrideConfirm) {
+  els.btnOverrideConfirm.addEventListener('click', async () => {
+    const reason = els.overrideReasonInput?.value?.trim() || 'No reason given';
+    await api.executeOverride?.(reason);
+    hideOverrideModal();
+    // Cancel the timer since they chose to override.
+    api.cancelTimer?.();
+    notify('Override recorded. Sleep well... eventually.', 'warning');
+  });
+}
+
+if (els.btnOverrideCancel) {
+  els.btnOverrideCancel.addEventListener('click', () => {
+    hideOverrideModal();
+  });
 }  els.btnPlus.addEventListener('click', () => {
     els.timerInput.value = inputValue() + 1;
     setInputFromSeconds(inputSeconds());
@@ -1546,6 +1751,7 @@ if (els.btnBreathingStop) {
       btn.classList.add('active');
       document.getElementById(`tab-${btn.dataset.tab}`)?.classList.add('active');
       if (btn.dataset.tab === 'streaks') loadStreaks();
+      if (btn.dataset.tab === 'focus') loadSleepDebt();
     });
   });
 
@@ -1929,6 +2135,8 @@ async function loadInitialData() {
 
     // Load streaks data
     loadStreaks();
+    // Load sleep debt data
+    loadSleepDebt();
 
     els.batteryLevel.textContent = systemInfo.battery === 'N/A' ? 'N/A' : `${systemInfo.battery}%`;
     els.powerPlan.textContent = systemInfo.powerPlan || 'Unknown';
@@ -2245,6 +2453,10 @@ function setupWarningHandlers() {
     hideWarningModal();
   });
   els.warningDismiss?.addEventListener('click', hideWarningModal);
+  els.warningOverride?.addEventListener('click', () => {
+    hideWarningModal();
+    showOverrideModal();
+  });
   els.warningModal?.addEventListener('click', event => {
     if (event.target === els.warningModal) hideWarningModal();
   });

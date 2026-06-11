@@ -2718,6 +2718,172 @@ body[data-theme="aurora"] {
   font-size: 11px;
 }
 
+/* ───────────── Focus Sessions ───────────── */
+.focus-panel {
+  text-align: center;
+  padding: 8px 0;
+}
+.focus-hero {
+  margin-bottom: 12px;
+}
+.focus-icon {
+  font-size: 28px;
+  margin-bottom: 4px;
+}
+.focus-presets {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.focus-preset-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.focus-preset-btn:hover {
+  border-color: var(--accent-cyan);
+  background: rgba(91, 140, 255, 0.08);
+}
+.fp-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.fp-detail {
+  display: block;
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.focus-ring-wrap {
+  position: relative;
+  margin: 0 auto 8px;
+}
+.focus-ring {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  border: 4px solid var(--accent-cyan);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  transition: border-color 0.5s, box-shadow 0.5s;
+}
+.focus-ring.focus-phase {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 20px rgba(91, 140, 255, 0.3);
+}
+.focus-ring.break-phase {
+  border-color: var(--accent-amber);
+  box-shadow: 0 0 20px rgba(212, 165, 10, 0.3);
+}
+.focus-ring-remaining {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.focus-phase-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-cyan);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 6px;
+}
+.focus-cycle-dots {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin: 8px 0 12px;
+}
+.cycle-dot {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+.cycle-dot.done {
+  color: #4caf50;
+}
+.cycle-dot.active {
+  color: var(--accent-cyan);
+  animation: pulse 2s ease infinite;
+}
+.focus-controls {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+/* ───────────── Sleep Debt ───────────── */
+.sleep-debt-section {
+  border-top: 1px solid var(--bg-card);
+  padding-top: 12px;
+}
+.debt-display {
+  text-align: center;
+  margin-bottom: 8px;
+}
+.debt-amount {
+  font-size: 28px;
+  font-weight: 700;
+  display: block;
+}
+.debt-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ───────────── Emergency Override Modal ───────────── */
+.override-modal-content {
+  max-width: 400px;
+  padding: 24px;
+  border: 1px solid #ff4d4d;
+  box-shadow: 0 0 40px rgba(255, 77, 77, 0.2);
+}
+.override-header {
+  text-align: center;
+  margin-bottom: 16px;
+}
+.override-icon {
+  font-size: 36px;
+  display: block;
+  margin-bottom: 4px;
+}
+.override-header h2 {
+  font-size: 18px;
+  color: #ff4d4d;
+}
+.override-consequences {
+  margin-bottom: 12px;
+}
+.override-reason {
+  margin-bottom: 12px;
+}
+.override-reason label {
+  display: block;
+  margin-bottom: 4px;
+}
+.override-reason input {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.override-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 /* ───────────── Imminent-action warning modal ───────────── */
 .warning-modal {
   z-index: 1500;

@@ -49,6 +49,10 @@ jobs:
           node --check wifiGuard.js
           node --check contentBlocker.js
           node --check accountability.js
+          node --check focusSessions.js
+          node --check screenTime.js
+          node --check sleepDebt.js
+          node --check emergencyOverride.js
 
       - name: Smoke tests
         run: npm run smoke
