@@ -5,6 +5,11 @@ const { app, BrowserWindow } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
+// Disable web security at the Chromium level so the release window can
+// load an external GitHub URL. This flag must be set before app.on('ready').
+app.commandLine.appendSwitch('disable-web-security');
+app.commandLine.appendSwitch('disable-features', 'IsolateOrigins,site-per-process');
+
 const OUT = path.join(__dirname, '..', '..', 'docs', 'release', 'screenshots', 'v10.0.2');
 const INDEX = path.join(__dirname, '..', 'index.html');
 const RELEASE_URL = 'https://github.com/Z3r0DayZion-install/lights-out/releases/tag/v10.0.2';
@@ -33,8 +38,20 @@ async function captureApp() {
     backgroundColor: '#0b0f1a',
     webPreferences: { backgroundThrottling: false }
   });
+
+  // Seed localStorage with onboarded=true so the app skips the first-run
+  // bedtime wizard and goes straight to the cockpit dashboard.
   await win.loadFile(INDEX);
-  await wait(2200);
+  await win.webContents.executeJavaScript(`(function(){
+    var stored = {};
+    try { stored = JSON.parse(localStorage.getItem('lightsout-settings') || '{}'); } catch {}
+    stored.app = Object.assign(stored.app || {}, { onboarded: true });
+    localStorage.setItem('lightsout-settings', JSON.stringify(stored));
+    return true;
+  })();`);
+  // Reload so checkOnboarding() reads the seeded flag and skips the wizard.
+  await win.webContents.reload();
+  await wait(2500);
 
   // 1. Ready state
   await win.webContents.executeJavaScript(`(function(){
@@ -104,31 +121,17 @@ async function captureApp() {
 }
 
 async function captureRelease() {
-  const win = new BrowserWindow({
-    width: 1200, height: 1000, show: true, backgroundColor: '#0d1117',
-    webPreferences: { webSecurity: false, contextIsolation: true, nodeIntegration: false }
-  });
-  await win.loadURL(RELEASE_URL);
-  await wait(4500);
-  // Scroll to the Assets area so the installer/portable/SHA256SUMS rows are in frame.
-  await win.webContents.executeJavaScript(`(function(){
-    var nodes = Array.from(document.querySelectorAll('a, summary, h2, span'));
-    var a = nodes.find(function(n){ return /SHA256SUMS\\.txt/i.test(n.textContent); });
-    if (a) a.scrollIntoView({ block: 'center' });
-    else window.scrollTo(0, Math.min(900, document.body.scrollHeight));
-    return true;
-  })();`).catch(() => {});
-  await wait(2000);
-  await shoot(win, '05_github_release.png');
-  win.destroy();
+  // Electron cannot load external GitHub URLs (ERR_FAILED).
+  // Use capture-website-cli (Puppeteer-based) instead:
+  //   npx capture-website-cli "$RELEASE_URL" --output="$OUT/05_github_release.png" --width=1200 --height=1000
+  // Or screenshot manually in a browser.
+  console.log('NOTE: GitHub release screenshot must be captured separately.');
+  console.log('  npx capture-website-cli "' + RELEASE_URL + '" --output="' + path.join(OUT, '05_github_release.png') + '" --width=1200 --height=1000');
 }
 
 app.whenReady().then(async () => {
   try {
-    // If 4 app screenshots already exist, skip to release capture only.
-    const skipApp = fs.existsSync(path.join(OUT, '04_settings_winddown.png'));
-    if (!skipApp) await captureApp();
-    else console.log('App screenshots already exist, skipping to release capture.');
+    await captureApp();
     await captureRelease();
   } catch (e) {
     console.error('FATAL', e);
