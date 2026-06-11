@@ -209,5 +209,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getLatestReceipt: () => ipcRenderer.invoke('get-latest-receipt'),
   listReceipts: (limit) => ipcRenderer.invoke('list-receipts', limit),
   clearReceipts: () => ipcRenderer.invoke('clear-receipts'),
-  getReceiptStats: () => ipcRenderer.invoke('get-receipt-stats')
+  getReceiptStats: () => ipcRenderer.invoke('get-receipt-stats'),
+
+  // Idle Detection
+  getIdleSeconds: () => ipcRenderer.invoke('get-idle-seconds'),
+  setIdleThreshold: (sec) => ipcRenderer.invoke('set-idle-threshold', sec),
+  onIdleDetected: (cb) => ipcRenderer.on('idle-detected', (e, data) => cb(data)),
+  onUserReturned: (cb) => ipcRenderer.on('user-returned', () => cb()),
+
+  // Bedtime Reminder
+  setBedtimeReminder: (min) => ipcRenderer.invoke('set-bedtime-reminder', min),
+  onBedtimeReminder: (cb) => ipcRenderer.on('bedtime-reminder', (e, data) => cb(data)),
+
+  // Morning Routine / Briefing
+  onMorningBriefing: (cb) => ipcRenderer.on('morning-briefing', (e, data) => cb(data)),
+
+  // Calendar Auto-Start
+  setCalendarAutoStart: (enabled) => ipcRenderer.invoke('set-calendar-auto-start', enabled)
 });

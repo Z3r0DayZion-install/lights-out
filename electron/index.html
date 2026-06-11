@@ -92,6 +92,7 @@
 
   <!-- Main Cockpit Container -->
   <div class="cockpit">
+    <canvas class="ambient-canvas" id="ambient-canvas"></canvas>
     
     <!-- Header with native window controls -->
     <header class="chrome-header">
@@ -577,7 +578,7 @@
         <button class="footer-action" id="btn-widget" title="Desktop widget">&#x1F4CA;</button>
         <button class="footer-action" id="btn-companion" title="Companion PWA">&#x1F4F1;</button>
         <span class="badge update-badge" id="badge-update" style="display:none" title="Update available">UPDATE</span>
-        <span id="version">v9.2.0</span>
+        <span id="version">v10.0.0</span>
       </div>
     </footer>
 
@@ -1015,6 +1016,38 @@
           </div>
 
           <div class="option-group">
+            <label>Ambient Visual</label>
+            <select id="cz-ambient">
+              <option value="off">Off</option>
+              <option value="fireplace">Fireplace</option>
+              <option value="rain">Rain on Glass</option>
+              <option value="starfield">Starfield</option>
+              <option value="aurora">Aurora</option>
+            </select>
+          </div>
+
+          <div class="option-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="chk-idle-detect">
+              Idle detection (nudge when you walk away)
+            </label>
+          </div>
+
+          <div class="option-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="chk-bedtime-reminder" checked>
+              Bedtime reminder (15 min before)
+            </label>
+          </div>
+
+          <div class="option-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="chk-calendar-autostart">
+              Auto-start timer from calendar events
+            </label>
+          </div>
+
+          <div class="option-group">
             <button type="button" id="btn-reset-customize" class="btn-secondary">Reset to defaults</button>
           </div>
         </div>
@@ -1210,6 +1243,7 @@
   </div>
 
   <script src="lastLight.js"></script>
+  <script src="ambientVisuals.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>

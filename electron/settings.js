@@ -64,7 +64,8 @@ const DEFAULTS = {
     opacity: 1,
     volume: 1,
     warmShift: true,
-    soundscape: 'off'
+    soundscape: 'off',
+    ambientVisual: 'off'
   },
   lastLight: {
     enabled: false,

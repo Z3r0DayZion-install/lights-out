@@ -186,6 +186,14 @@ const fallbackApi = (() => {
     listReceipts: async () => [],
     clearReceipts: async () => ({ cleared: true }),
     getReceiptStats: async () => ({ total: 0, completed: 0, cancelled: 0, dryRun: 0, blocked: 0 }),
+    getIdleSeconds: async () => 0,
+    setIdleThreshold: async () => ({ threshold: 300 }),
+    onIdleDetected: (cb) => {},
+    onUserReturned: (cb) => {},
+    setBedtimeReminder: async () => ({ minutesBefore: 15 }),
+    onBedtimeReminder: (cb) => {},
+    onMorningBriefing: (cb) => {},
+    setCalendarAutoStart: async () => ({ autoStartFromEvents: false }),
     openExternal: async () => {},
     addCustomSequence: async () => null,
     removeCustomSequence: async () => ({ success: true }),
@@ -320,6 +328,11 @@ const els = {
   czVolumeVal: document.getElementById('cz-volume-val'),
   czWarmShift: document.getElementById('cz-warmshift'),
   czSoundscape: document.getElementById('cz-soundscape'),
+  czAmbient: document.getElementById('cz-ambient'),
+  chkIdleDetect: document.getElementById('chk-idle-detect'),
+  chkBedtimeReminder: document.getElementById('chk-bedtime-reminder'),
+  chkCalendarAutostart: document.getElementById('chk-calendar-autostart'),
+  ambientCanvas: document.getElementById('ambient-canvas'),
   btnResetCustomize: document.getElementById('btn-reset-customize'),
   // Last Light elements
   chkLastLight: document.getElementById('chk-lastlight'),
@@ -541,7 +554,8 @@ const state = {
     opacity: 1,
     volume: 1,
     warmShift: true,
-    soundscape: 'off'
+    soundscape: 'off',
+    ambientVisual: 'off'
   },
   // Last Light state
   lastLight: {
@@ -1081,6 +1095,7 @@ function applyTimerPayload(data) {
     api.showNotification('Lights Out', state.dryRun ? 'Dry run complete.' : `${actionLabel()} started.`);
     notify(data.message || 'Timer complete', 'success', 5000);
     stopGuidedBreathing();
+    if (typeof AmbientVisuals !== 'undefined') AmbientVisuals.stop();
   } else if (data.type === 'cancelled') {
     state.running = false;
     state.paused = false;
@@ -1090,6 +1105,7 @@ function applyTimerPayload(data) {
     hideWarningModal();
     removeWarmFilter();
     stopGuidedBreathing();
+    if (typeof AmbientVisuals !== 'undefined') AmbientVisuals.stop();
   } else if (data.type === 'warning') {
     SoundSystem.playWarning();
     if (data.message) {
@@ -1100,7 +1116,15 @@ function applyTimerPayload(data) {
     }
   } else if (data.type === 'phase') {
     state.phase = data.phase || 'idle';
-    if (data.phase === 'dim') applyWarmFilter();
+    if (data.phase === 'dim') {
+      applyWarmFilter();
+      // Start ambient visual during dim phase.
+      const vis = state.customization.ambientVisual || 'off';
+      if (vis !== 'off' && typeof AmbientVisuals !== 'undefined') {
+        AmbientVisuals.init(els.ambientCanvas);
+        AmbientVisuals.start(vis);
+      }
+    }
     if (data.phase === 'lastlight') Soundscape.fadeToZero(3);
   } else if (data.type === 'started') {
     state.phase = 'focus';
@@ -1390,6 +1414,26 @@ function renderWifiDevices(devices) {
 api.onWifiGuardStatus?.(data => {
   if (data?.blocked) notify('WiFi Guard: Internet blocked', 'warning');
   else if (data && !data.blocked) notify('WiFi Guard: Internet restored', 'info');
+});
+
+// Bedtime Reminder notification.
+api.onBedtimeReminder?.(data => {
+  if (data?.message) {
+    notify(data.message, 'info', 10000);
+  }
+});
+
+// Idle detection notification.
+api.onIdleDetected?.(data => {
+  notify(`You've been idle for ${Math.round(data.idleSeconds / 60)} minutes. Still there?`, 'warning');
+});
+
+// Morning briefing (from First Light).
+api.onMorningBriefing?.(data => {
+  if (data?.events?.length) {
+    const next = data.events[0];
+    notify(`Morning! Next: ${next.title || 'Nothing scheduled'}`, 'info', 8000);
+  }
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2528,7 +2572,7 @@ function hexToRgba(hex, alpha) {
   return `rgba(${parseInt(m[1], 16)}, ${parseInt(m[2], 16)}, ${parseInt(m[3], 16)}, ${alpha})`;
 }
 
-const CUSTOMIZE_DEFAULTS = { accent: '#5b8cff', theme: 'midnight', ringStyle: 'glow', opacity: 1, volume: 1, warmShift: true, soundscape: 'off' };
+const CUSTOMIZE_DEFAULTS = { accent: '#5b8cff', theme: 'midnight', ringStyle: 'glow', opacity: 1, volume: 1, warmShift: true, soundscape: 'off', ambientVisual: 'off' };
 
 function syncCustomizeUI() {
   const c = state.customization;
@@ -2541,6 +2585,7 @@ function syncCustomizeUI() {
   if (els.czVolumeVal) els.czVolumeVal.textContent = `${Math.round(c.volume * 100)}%`;
   if (els.czWarmShift) els.czWarmShift.checked = c.warmShift !== false;
   if (els.czSoundscape) els.czSoundscape.value = c.soundscape || 'off';
+  if (els.czAmbient) els.czAmbient.value = c.ambientVisual || 'off';
   if (els.czSwatches) {
     els.czSwatches.querySelectorAll('.swatch').forEach(sw => {
       sw.classList.toggle('active', sw.dataset.color.toLowerCase() === c.accent.toLowerCase());
@@ -2593,6 +2638,19 @@ function setupCustomizeHandlers() {
     state.customization.soundscape = els.czSoundscape.value;
     if (state.running) Soundscape.start(els.czSoundscape.value);
     else Soundscape.stop();
+  });
+  els.czAmbient?.addEventListener('change', () => {
+    state.customization.ambientVisual = els.czAmbient.value;
+    if (AmbientVisuals.isActive()) AmbientVisuals.start(els.czAmbient.value);
+  });
+  els.chkIdleDetect?.addEventListener('change', () => {
+    api.setIdleThreshold?.(els.chkIdleDetect.checked ? 300 : 0);
+  });
+  els.chkBedtimeReminder?.addEventListener('change', () => {
+    api.setBedtimeReminder?.(els.chkBedtimeReminder.checked ? 15 : 0);
+  });
+  els.chkCalendarAutostart?.addEventListener('change', () => {
+    api.setCalendarAutoStart?.(els.chkCalendarAutostart.checked);
   });
 }
 

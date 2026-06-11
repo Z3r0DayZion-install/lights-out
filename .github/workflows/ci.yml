@@ -54,6 +54,9 @@ jobs:
           node --check sleepDebt.js
           node --check emergencyOverride.js
           node --check runReceipts.js
+          node --check ambientVisuals.js
+          node --check idleDetection.js
+          node --check bedtimeReminder.js
 
       - name: Smoke tests
         run: npm run smoke

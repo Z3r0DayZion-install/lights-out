@@ -251,10 +251,27 @@ body {
   max-width: 520px;
   margin: 0 auto;
   background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+  position: relative;
+}
+
+/* Ambient Visuals Canvas */
+.ambient-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 2s ease;
+}
+body.phase-dim .ambient-canvas,
+body.warm-shift .ambient-canvas {
+  opacity: 0.6;
 }
 
 /* Chrome Header */
 .chrome-header {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -451,6 +468,8 @@ body {
   padding: var(--section-gap);
   display: flex;
   flex-direction: column;
+  position: relative;
+  z-index: 1;
   gap: var(--section-gap);
 }
 

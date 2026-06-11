@@ -22,6 +22,8 @@ const screenTime = require('./screenTime');
 const sleepDebt = require('./sleepDebt');
 const emergencyOverride = require('./emergencyOverride');
 const runReceipts = require('./runReceipts');
+const idleDetection = require('./idleDetection');
+const bedtimeReminder = require('./bedtimeReminder');
 
 const APP_ICON = path.join(__dirname, 'assets', 'icon.ico');
 
@@ -749,6 +751,33 @@ function playFirstLight() {
   mainWindow.setOpacity(0);
   mainWindow.webContents.send('first-light-started');
 
+  // Smart Light Sunrise: gradually brighten room lights during First Light.
+  const slConfig = smartLights.getConfig();
+  if (slConfig.enabled) {
+    let slElapsed = 0;
+    const slInterval = setInterval(() => {
+      slElapsed++;
+      const brightness = Math.min(100, Math.round((slElapsed / FIRST_LIGHT_DURATION) * 100));
+      smartLights.invokeSmartLightAction({ on: true, brightness, colorTemp: 400 - Math.round(brightness * 1.5) }).catch(() => {});
+      if (slElapsed >= FIRST_LIGHT_DURATION) clearInterval(slInterval);
+    }, 5000); // update every 5s to avoid API spam
+  }
+
+  // Morning Routine: send briefing data to renderer.
+  setTimeout(async () => {
+    try {
+      const calSettings = settingsStore.getSection('calendar') || {};
+      const events = await calProviders.fetchEvents(calSettings, 1);
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('morning-briefing', {
+          events: (events || []).slice(0, 5),
+          sleepDebt: sleepDebt.getDebtSummary(),
+          streaks: streaks.getSummary()
+        });
+      }
+    } catch {}
+  }, 5000);
+
   let elapsed = 0;
   const interval = setInterval(() => {
     elapsed++;
@@ -803,6 +832,35 @@ function sendAccountability(eventType, extra = {}) {
     phase: timerState.phase,
     ...extra
   }).catch(() => {}); // best-effort, never block
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Calendar Auto-Start: zero-friction timer from calendar events.
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function checkCalendarAutoStart() {
+  const calSettings = settingsStore.getSection('calendar') || {};
+  if (!calSettings.enabled || !calSettings.autoStartFromEvents) return;
+  if (timerState.running) return; // already running
+
+  try {
+    const events = await calProviders.fetchEvents(calSettings, 1); // within 1 day
+    if (!events || !events.length) return;
+
+    const now = new Date();
+    for (const event of events) {
+      const start = new Date(event.start);
+      const diffMin = (start - now) / 60000;
+      // If event starts within the next 2 minutes, auto-start.
+      if (diffMin >= -1 && diffMin <= 2) {
+        const duration = Math.max(300, Math.round((new Date(event.end) - now) / 1000));
+        const action = event.action || calSettings.builtin?.action || 'shutdown';
+        startTimer({ durationSeconds: duration, action });
+        showNativeNotification('Lights Out', `Auto-started from calendar: ${event.title || 'Bedtime'}`);
+        break;
+      }
+    }
+  } catch { /* best effort */ }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1300,6 +1358,23 @@ ipcMain.handle('clear-receipts', async () => {
 ipcMain.handle('get-receipt-stats', async () => {
   return runReceipts.getReceiptStats();
 });
+ipcMain.handle('get-idle-seconds', async () => {
+  try { return await idleDetection.getIdleSeconds(); } catch { return 0; }
+});
+ipcMain.handle('set-idle-threshold', async (e, sec) => {
+  idleDetection.setThreshold(sec);
+  return { threshold: idleDetection.getThreshold() };
+});
+ipcMain.handle('set-bedtime-reminder', async (e, min) => {
+  bedtimeReminder.setMinutesBefore(min);
+  return { minutesBefore: bedtimeReminder.getMinutesBefore() };
+});
+ipcMain.handle('set-calendar-auto-start', async (e, enabled) => {
+  const cal = settingsStore.getSection('calendar') || {};
+  cal.autoStartFromEvents = !!enabled;
+  settingsStore.setSection('calendar', cal);
+  return { autoStartFromEvents: cal.autoStartFromEvents };
+});
 ipcMain.handle('resume-recoverable-timer', async () => {
   const snapshot = getRecoverableTimer();
   if (!snapshot) return { success: false };
@@ -1755,6 +1830,36 @@ app.whenReady().then(async () => {
     showNativeNotification('Focus Session', `All cycles done! ${Math.round(fs.totalFocusTime / 60)} min of deep work.`);
   });
 
+  // Idle Detection: nudge when user walks away during wind-down.
+  idleDetection.startMonitoring({
+    thresholdSeconds: 300,
+    onIdle: (idleSec) => {
+      if (timerState.running && !timerState.paused) {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('idle-detected', { idleSeconds: idleSec });
+        }
+      }
+    },
+    onReturn: () => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('user-returned');
+      }
+    }
+  });
+
+  // Bedtime Reminder: gentle nudge 15 min before bedtime.
+  bedtimeReminder.startReminder({
+    minutesBefore: 15,
+    onReminder: (data) => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('bedtime-reminder', data);
+      }
+    }
+  });
+
+  // Calendar Auto-Start: check for upcoming events and auto-start timer.
+  setInterval(checkCalendarAutoStart, 60000);
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
@@ -1776,4 +1881,6 @@ app.on('before-quit', () => {
   companion.stop();
   family.stopDiscovery();
   family.stopCommandServer();
+  idleDetection.stopMonitoring();
+  bedtimeReminder.stopReminder();
 });
