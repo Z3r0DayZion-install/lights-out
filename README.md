@@ -56,6 +56,9 @@ full contributor handoff and which runtime owns a given task.
 
 - Countdown to shutdown, restart, sleep, hibernate, or log out.
 - Start, pause, resume, snooze, cancel, mini mode, tray, and taskbar progress.
+- **Nightly tray utility** - sit in the tray and show the current time while idle
+  (Clock Mode), start common timers (28 min / 1 hour) and pause / resume / snooze /
+  cancel straight from the tray, with the live countdown kept in the tray tooltip.
 - **Wind-down phase** - ambient visuals (fireplace, rain, starfield, aurora),
   warm color shift, and optional Night Light / media pause.
 - **Stateful settings** - everything persists to `userData\settings.json` and is
