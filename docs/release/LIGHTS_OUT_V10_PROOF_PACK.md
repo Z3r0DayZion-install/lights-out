@@ -1,9 +1,31 @@
-# Lights Out v10.0.2 Proof Pack
+# Lights Out v10.0.3 Proof Pack
 
-**Version:** 10.0.2
+**Version:** 10.0.3
 
 **Release line:**
-Lights Out v10.0.2 is the zero-friction sleep/shutdown timer: calendar-aware, idle-aware, bedtime-aware, with ambient visuals, smart-light sunrise, and proof-backed Windows builds. v10.0.2 is a patch release that fixes settings persistence, stops the app from changing the Windows desktop theme, adds opt-in wind-down system actions, and ships a UI polish pass.
+Lights Out v10.0.3 is the zero-friction sleep/shutdown timer: calendar-aware, idle-aware, bedtime-aware, with ambient visuals, smart-light sunrise, and proof-backed Windows builds. v10.0.3 is a UX patch that reworks the system-tray context menu, adds an idle Clock Mode hero, and fixes a tray-menu rebuild bug that could drop a click on the open menu.
+
+## Patch v10.0.3 (UX patch after v10.0.2)
+
+These are the user-facing changes in this patch. All were verified before the `v10.0.3` tag.
+
+- **Reworked tray context menu** — phase-aware status header, Show Lights Out / Hide to Tray, **Open Settings** (focuses the window and opens settings via the new `open-settings` IPC), quick **Start 28 min** / **Start 1 hour**, and a clean Quit. While a timer runs the menu offers **Pause/Resume**, **Snooze +5 min**, and **Cancel Timer**.
+- **No Force Shutdown in the tray** — the hard stop stays explicit and discoverable elsewhere; it is never one click away in the tray.
+- **Clock Mode (idle hero)** — when idle, the hero ring shows the current local time with a "READY" sublabel (and bedtime line when configured), switching to the live countdown the moment a timer starts. Lives in **Customize → "Show current time when idle"**, default ON.
+- **Tray menu rebuild fix** — the timer tick used to rebuild the tray context menu every second (`tray.setContextMenu()` per tick). On Windows that can drop a click on an open menu (e.g. Pause), leaving the timer running and the menu stuck on "Pause". The menu is now rebuilt only on real state transitions; the live countdown stays in the tray **tooltip** via `updateTrayText()` each tick.
+
+### Patch v10.0.3 verification
+
+- `node --check` (main/renderer/settings/preload): PASS
+- Smoke tests: 41/41 PASS
+- `npm run build`: PASS (portable + installer)
+- CDP runtime test (Clock Mode placement, idle clock, countdown switch, START hidden, Cancel, toggles OFF, no theme hijack, settings modal): 16/16 PASS
+- Tray rebuild fix verified via instrumentation: menu rebuilds once per state transition, zero per-tick rebuilds
+
+### Patch v10.0.3 screenshots
+
+- `docs/release/screenshots/v10.0.3/01_clock_mode_idle.png` — idle hero showing current time + READY
+- `docs/release/screenshots/v10.0.3/02_clock_mode_setting.png` — Customize section with "Show current time when idle"
 
 ## Patch v10.0.2 (fixes after v10.0.1)
 
@@ -45,6 +67,7 @@ These fixes are why a patch was required. They were found and verified after the
 - v10.0.1 patch: ambient visuals global export, customize scroll, menu bar, AC power fallback, window height, screenshots
 - `48461d4` v10.0.2: settings persistence, drop desktop-theme hijack, opt-in wind-down toggles, menu/window (#3)
 - `a750430` v10.0.2: hero/tabs/cards UI polish (#4)
+- `d365e59` v10.0.3: tray context menu + Clock Mode, with per-tick tray rebuild fix (#5)
 
 ## Build
 
@@ -54,7 +77,7 @@ These fixes are why a patch was required. They were found and verified after the
 
 ## Artifacts
 
-- `Lights Out Setup 10.0.2.exe`
+- `Lights Out Setup 10.0.3.exe`
 - `LightsOut.exe` portable
 - `SHA256SUMS.txt` (checksums for both artifacts, generated in CI release step)
 
@@ -98,10 +121,10 @@ These fixes are why a patch was required. They were found and verified after the
 
 ## Version Alignment
 
-- `package.json` version: `10.0.2`
-- Build output: `Lights Out Setup 10.0.2.exe`
-- HTML footer: `v10.0.2`
-- Git tag: `v10.0.2`
+- `package.json` version: `10.0.3`
+- Build output: `Lights Out Setup 10.0.3.exe`
+- HTML footer: `v10.0.3`
+- Git tag: `v10.0.3`
 
 ## Safety Guarantees
 
