@@ -34,7 +34,9 @@ const DEFAULTS = {
     // Wind-down system actions. Default OFF so the app never touches the OS unasked.
     nightLightOnDim: false,
     pauseMediaOnDim: false,
-    lockoutOnDim: false
+    lockoutOnDim: false,
+    // Clock Mode: show current time when idle instead of countdown input.
+    clockMode: true
   },
   calendar: {
     enabled: true,

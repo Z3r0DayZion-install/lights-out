@@ -226,5 +226,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onMorningBriefing: (cb) => ipcRenderer.on('morning-briefing', (e, data) => cb(data)),
 
   // Calendar Auto-Start
-  setCalendarAutoStart: (enabled) => ipcRenderer.invoke('set-calendar-auto-start', enabled)
+  setCalendarAutoStart: (enabled) => ipcRenderer.invoke('set-calendar-auto-start', enabled),
+
+  // Open settings from tray
+  onOpenSettings: (callback) => {
+    ipcRenderer.on('open-settings', () => callback());
+  }
 });
