@@ -211,10 +211,9 @@ function refreshTrayMenu() {
   if (!tray) return;
 
   const active = timerState.running || timerState.paused;
-  const remaining = active ? formatTime(timerState.remainingSeconds) : '';
   const phaseLabel = timerState.phase === 'dim' ? 'Winding Down' : timerState.phase === 'lastlight' ? 'Last Light' : '';
   const statusLine = active
-    ? (timerState.paused ? `Paused - ${remaining}` : `${phaseLabel ? phaseLabel + ': ' : ''}${remaining} left`)
+    ? (timerState.paused ? 'Paused' : (phaseLabel || 'Running'))
     : 'Idle';
 
   const contextMenu = Menu.buildFromTemplate([
@@ -324,7 +323,10 @@ function emitTimerUpdate(type, data = {}) {
   }
 
   updateTrayText();
-  refreshTrayMenu();
+  // Only rebuild the tray context menu on real state transitions, not every
+  // tick. Replacing the menu every second can drop a click on an open menu
+  // (e.g. Pause), leaving the timer running and the menu stuck on "Pause".
+  if (type !== 'tick') refreshTrayMenu();
 }
 
 function updateTrayText() {
