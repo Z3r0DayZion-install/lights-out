@@ -211,10 +211,9 @@ function refreshTrayMenu() {
   if (!tray) return;
 
   const active = timerState.running || timerState.paused;
-  const remaining = active ? formatTime(timerState.remainingSeconds) : '';
-  const phaseLabel = timerState.phase === 'dim' ? 'Dim' : timerState.phase === 'lastlight' ? 'Last Light' : '';
+  const phaseLabel = timerState.phase === 'dim' ? 'Winding Down' : timerState.phase === 'lastlight' ? 'Last Light' : '';
   const statusLine = active
-    ? (timerState.paused ? `Paused - ${remaining}` : `${phaseLabel ? phaseLabel + ' - ' : ''}${remaining} left`)
+    ? (timerState.paused ? 'Paused' : (phaseLabel || 'Running'))
     : 'Idle';
 
   const contextMenu = Menu.buildFromTemplate([
@@ -224,16 +223,15 @@ function refreshTrayMenu() {
     },
     { type: 'separator' },
     {
-      label: mainWindow && mainWindow.isVisible() ? 'Hide Window' : 'Show Window',
+      label: mainWindow && mainWindow.isVisible() ? 'Hide to Tray' : 'Show Lights Out',
       click: toggleMainWindow
     },
     {
-      label: 'Desktop Widget',
-      type: 'checkbox',
-      checked: widgetMode,
+      label: 'Open Settings',
       click: () => {
-        if (widgetMode) closeWidgetWindow();
-        else createWidgetWindow();
+        if (!mainWindow) return;
+        if (!mainWindow.isVisible()) mainWindow.show();
+        mainWindow.webContents.send('open-settings');
       }
     },
     { type: 'separator' },
@@ -251,10 +249,8 @@ function refreshTrayMenu() {
         click: cancelTimer
       }
     ] : [
-      { label: '15 min until bed', click: () => startTimer({ durationSeconds: 15 * 60, action: 'shutdown' }) },
-      { label: '30 min until bed', click: () => startTimer({ durationSeconds: 30 * 60, action: 'shutdown' }) },
-      { label: '45 min until bed', click: () => startTimer({ durationSeconds: 45 * 60, action: 'shutdown' }) },
-      { label: '1 hour until bed', click: () => startTimer({ durationSeconds: 60 * 60, action: 'shutdown' }) }
+      { label: 'Start 28 min', click: () => startTimer({ durationSeconds: 28 * 60, action: 'shutdown' }) },
+      { label: 'Start 1 hour', click: () => startTimer({ durationSeconds: 60 * 60, action: 'shutdown' }) }
     ],
     { type: 'separator' },
     {
@@ -327,7 +323,10 @@ function emitTimerUpdate(type, data = {}) {
   }
 
   updateTrayText();
-  refreshTrayMenu();
+  // Only rebuild the tray context menu on real state transitions, not every
+  // tick. Replacing the menu every second can drop a click on an open menu
+  // (e.g. Pause), leaving the timer running and the menu stuck on "Pause".
+  if (type !== 'tick') refreshTrayMenu();
 }
 
 function updateTrayText() {
@@ -339,7 +338,8 @@ function updateTrayText() {
     return;
   }
 
-  const prefix = timerState.paused ? 'Paused' : 'Running';
+  const phaseTag = timerState.phase === 'dim' ? 'Winding Down' : timerState.phase === 'lastlight' ? 'Last Light' : '';
+  const prefix = timerState.paused ? 'Paused' : (phaseTag || 'Running');
   tray.setToolTip(`Lights Out - ${prefix}, ${formatTime(timerState.remainingSeconds)} left`);
   if (trayIcons) {
     const icon = timerState.paused ? trayIcons.paused

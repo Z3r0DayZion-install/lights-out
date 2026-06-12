@@ -128,6 +128,7 @@ const fallbackApi = (() => {
     onMediaPaused: () => {},
     onUnsavedWorkWarning: () => {},
     onDimPhaseEnded: () => {},
+    onOpenSettings: () => {},
     getStreaks: async () => ({ streak: 0, bestStreak: 0, totalNights: 0, achievements: [], weekAvg: '--:--', weekOnTime: 0, weekDays: [] }),
     getAchievementsCatalog: async () => [],
     getWeeklyReport: async () => null,
@@ -335,6 +336,7 @@ const els = {
   chkNightlightDim: document.getElementById('chk-nightlight-dim'),
   chkPauseMediaDim: document.getElementById('chk-pausemedia-dim'),
   chkLockoutDim: document.getElementById('chk-lockout-dim'),
+  chkClockMode: document.getElementById('chk-clock-mode'),
   ambientCanvas: document.getElementById('ambient-canvas'),
   btnResetCustomize: document.getElementById('btn-reset-customize'),
   // Last Light elements
@@ -568,6 +570,8 @@ const state = {
   },
   // Wind-down phase state
   phase: 'idle',
+  // Clock Mode: show current time when idle
+  clockMode: true,
   // Custom timer name
   timerName: 'Witching Hour',
   // Profiles state
@@ -906,6 +910,7 @@ function notify(message, type = 'info') {
 }
 
 function render() {
+  const isIdle = !state.running && !state.paused;
   const displaySeconds = state.running || state.paused ? state.remainingSeconds : inputSeconds();
   const totalSeconds = state.running || state.paused ? state.totalSeconds : displaySeconds;
 
@@ -913,12 +918,27 @@ function render() {
   els.body.classList.toggle('is-paused', state.paused);
   els.body.classList.toggle('mini-mode', state.miniMode);
 
-  els.timerMain.textContent = formatTime(displaySeconds);
-  els.timerLabel.textContent = state.paused
-    ? `${actionLabel()} paused`
-    : state.running
-      ? `until ${actionLabel().toLowerCase()}`
-      : 'ready';
+  // Clock Mode: show current time when idle instead of countdown input.
+  if (isIdle && state.clockMode) {
+    const now = new Date();
+    const h = now.getHours().toString().padStart(2, '0');
+    const m = now.getMinutes().toString().padStart(2, '0');
+    els.timerMain.textContent = `${h}:${m}`;
+    // Show next bedtime reminder if configured.
+    const bedtime = state.bedtime || '';
+    if (bedtime && els.timerLabel) {
+      els.timerLabel.textContent = `Bedtime ${bedtime}`;
+    } else {
+      els.timerLabel.textContent = 'ready';
+    }
+  } else {
+    els.timerMain.textContent = formatTime(displaySeconds);
+    els.timerLabel.textContent = state.paused
+      ? `${actionLabel()} paused`
+      : state.running
+        ? `until ${actionLabel().toLowerCase()}`
+        : 'ready';
+  }
 
   updateRing(displaySeconds, totalSeconds);
 
@@ -2452,7 +2472,8 @@ function collectAppSettings() {
     focusBlocklist,
     nightLightOnDim: els.chkNightlightDim?.checked || false,
     pauseMediaOnDim: els.chkPauseMediaDim?.checked || false,
-    lockoutOnDim: els.chkLockoutDim?.checked || false
+    lockoutOnDim: els.chkLockoutDim?.checked || false,
+    clockMode: els.chkClockMode?.checked || false
   };
 }
 
@@ -2481,6 +2502,10 @@ function applyAppSettings(app) {
   if (els.chkNightlightDim) els.chkNightlightDim.checked = !!app.nightLightOnDim;
   if (els.chkPauseMediaDim) els.chkPauseMediaDim.checked = !!app.pauseMediaOnDim;
   if (els.chkLockoutDim) els.chkLockoutDim.checked = !!app.lockoutOnDim;
+  if (els.chkClockMode) els.chkClockMode.checked = app.clockMode !== false;
+  state.clockMode = app.clockMode !== false;
+  state.bedtime = app.bedtime || '';
+  render();
 }
 
 function collectWifiGuardSettings() {
@@ -3466,6 +3491,11 @@ api.onPlayLastLight(payload => {
   // Start guided breathing alongside Last Light.
   startGuidedBreathing();
 });
+api.onOpenSettings(() => {
+  syncCustomizeUI();
+  updateLastLightUIFromState();
+  if (els.optionsModal) els.optionsModal.classList.add('active');
+});
 api.onBrowserWarning?.(data => {
   if (data?.message) notify(data.message, 'warning', 8000);
 });
@@ -3862,4 +3892,11 @@ checkOnboarding();
     obs.observe(dashboard, { childList: true, subtree: true, attributes: true, attributeFilter: ['style', 'class', 'hidden'] });
   }
   setTimeout(fit, 150);
+})();
+
+// Clock Mode: tick the displayed time every second while idle.
+(function setupClockTick() {
+  setInterval(() => {
+    if (!state.running && !state.paused && state.clockMode) render();
+  }, 1000);
 })();
