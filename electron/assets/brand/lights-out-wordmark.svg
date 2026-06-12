@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Lights Out Wordmark: dark articulated lamp + digital alarm-clock "LIGHTS OUT" with fading/dimming OUT -->
+<svg width="800" height="220" viewBox="0 0 800 220" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Beam: semi-transparent cone from shade to right edge -->
+    <linearGradient id="g-beam" x1="0" y1="0.5" x2="1" y2="0.5">
+      <stop offset="0"   stop-color="#00FFD1" stop-opacity="0.25"/>
+      <stop offset="0.15" stop-color="#00FFD1" stop-opacity="0.12"/>
+      <stop offset="0.6"  stop-color="#64FFF0" stop-opacity="0.04"/>
+      <stop offset="1"    stop-color="#00BFA6" stop-opacity="0.0"/>
+    </linearGradient>
+
+    <!-- Ring glow for the partial O in OUT -->
+    <filter id="f-ring" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+
+    <!-- Text glow for LIGHTS -->
+    <filter id="f-text" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="2" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+
+    <!-- Lamp body gradient -->
+    <linearGradient id="g-lamp" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1e242d"/>
+      <stop offset="0.6" stop-color="#141920"/>
+      <stop offset="1" stop-color="#0c1016"/>
+    </linearGradient>
+
+    <!-- Lamp highlight -->
+    <linearGradient id="g-lamp-hl" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#2a323c"/>
+      <stop offset="1" stop-color="#1a1f27"/>
+    </linearGradient>
+
+    <!-- Subtle grid pattern for digital background texture -->
+    <pattern id="p-grid" width="8" height="8" patternUnits="userSpaceOnUse">
+      <circle cx="4" cy="4" r="0.4" fill="#00FFD1" opacity="0.03"/>
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="220" rx="14" fill="#050B10"/>
+  <!-- Subtle digital grid texture -->
+  <rect width="800" height="220" rx="14" fill="url(#p-grid)"/>
+  <!-- Thin border -->
+  <rect x="0.5" y="0.5" width="799" height="219" rx="13.5"
+        fill="none" stroke="#00FFD1" stroke-opacity="0.06" stroke-width="1"/>
+
+  <!-- ===== LAMP: sharp geometric articulated desk lamp ===== -->
+  <g id="lamp" stroke-linejoin="miter">
+    <!-- Base -->
+    <ellipse cx="72" cy="194" rx="26" ry="7" fill="#121820"/>
+    <ellipse cx="72" cy="193" rx="24" ry="5.5" fill="#1a202a"/>
+    <rect x="56" y="182" width="32" height="11" fill="url(#g-lamp)"/>
+    <!-- Base accent line -->
+    <line x1="56" y1="186" x2="88" y2="186" stroke="#2a323c" stroke-width="1.5"/>
+
+    <!-- Lower arm -->
+    <line x1="72" y1="184" x2="105" y2="140" stroke="#181e27" stroke-width="8" stroke-linecap="butt"/>
+    <line x1="72" y1="184" x2="105" y2="140" stroke="#252d38" stroke-width="2.5" stroke-linecap="butt"/>
+
+    <!-- Mid joint: geometric bolt -->
+    <circle cx="105" cy="140" r="5" fill="#121820"/>
+    <circle cx="105" cy="140" r="3" fill="#252d38"/>
+
+    <!-- Upper arm -->
+    <line x1="105" y1="140" x2="130" y2="100" stroke="#181e27" stroke-width="7" stroke-linecap="butt"/>
+    <line x1="105" y1="140" x2="130" y2="100" stroke="#252d38" stroke-width="2" stroke-linecap="butt"/>
+
+    <!-- Head joint -->
+    <circle cx="130" cy="100" r="4.5" fill="#121820"/>
+    <circle cx="130" cy="100" r="2.5" fill="#252d38"/>
+
+    <!-- Shade: sharp trapezoid cone pointing right -->
+    <polygon points="116,111  138,104  165,146  143,153"
+             fill="url(#g-lamp)" stroke="#0c1016" stroke-width="1.5"/>
+    <!-- Shade face highlight -->
+    <polygon points="121,113  136,107  156,145  145,149"
+             fill="url(#g-lamp-hl)"/>
+    <!-- Sharp rim edge at shade opening -->
+    <line x1="143" y1="153" x2="165" y2="146"
+          stroke="#333c47" stroke-width="3.5" stroke-linecap="butt"/>
+    <!-- Inner shadow line along shade -->
+    <line x1="126" y1="116" x2="148" y2="148"
+          stroke="#0c1016" stroke-width="1.5" opacity="0.5"/>
+  </g>
+
+  <!-- ===== LIGHT BEAM from shade opening across text ===== -->
+  <polygon points="144,153  165,146  790,42  790,168"
+           fill="url(#g-beam)"/>
+
+  <!-- ===== "LIGHTS OUT" TEXT ===== -->
+  <!--
+    Digital alarm-clock styling:
+    - "LIGHTS" in segmented/geometric letterforms, fully lit #00FFD1
+    - "OUT" fading left-to-right
+    - O rendered as partial countdown ring
+    - U dimmer but readable
+    - T mostly dark
+  -->
+
+  <!-- Sub-grid lines to suggest digital display -->
+  <g stroke="#00FFD1" stroke-opacity="0.04" stroke-width="0.5">
+    <line x1="185" y1="97"  x2="560" y2="97"/>
+    <line x1="185" y1="113" x2="560" y2="113"/>
+    <line x1="185" y1="129" x2="560" y2="129"/>
+    <line x1="185" y1="145" x2="560" y2="145"/>
+    <line x1="185" y1="161" x2="560" y2="161"/>
+  </g>
+
+  <!-- "LIGHTS": geometric blocky letterforms (custom paths for digital-display feel) -->
+  <g fill="#00FFD1" filter="url(#f-text)">
+    <!-- L -->
+    <rect x="185" y="108" width="8"  height="60"/>
+    <rect x="193" y="160" width="30" height="8"/>
+
+    <!-- I -->
+    <rect x="233" y="108" width="28" height="8"/>
+    <rect x="247" y="116" width="8"  height="44"/>
+    <rect x="233" y="160" width="28" height="8"/>
+
+    <!-- G -->
+    <rect x="273" y="108" width="30" height="8"/>
+    <rect x="273" y="116" width="8"  height="44"/>
+    <rect x="273" y="160" width="30" height="8"/>
+    <rect x="295" y="136" width="8"  height="24"/>
+    <rect x="281" y="136" width="14" height="6"/>
+
+    <!-- H -->
+    <rect x="315" y="108" width="8"  height="60"/>
+    <rect x="345" y="108" width="8"  height="60"/>
+    <rect x="315" y="136" width="38" height="8"/>
+
+    <!-- T -->
+    <rect x="365" y="108" width="30" height="8"/>
+    <rect x="376" y="116" width="8"  height="52"/>
+
+    <!-- S -->
+    <rect x="405" y="108" width="32" height="8"/>
+    <rect x="405" y="116" width="8"  height="16"/>
+    <rect x="405" y="136" width="30" height="8"/>
+    <rect x="429" y="144" width="8"  height="16"/>
+    <rect x="405" y="160" width="32" height="8"/>
+  </g>
+
+  <!-- " OUT": fading, O as partial ring -->
+  <g>
+    <!-- Gap between words -->
+    <!-- O: partial countdown ring -->
+    <g transform="translate(455, 108)">
+      <!-- Full ring background (dark, subtle) -->
+      <circle cx="28" cy="30" r="25"
+              fill="none" stroke="#00FFD1" stroke-opacity="0.08" stroke-width="4"
+              stroke-dasharray="36 6 34 8 32 6 35 0"/>
+      <!-- Lit partial ring -->
+      <circle cx="28" cy="30" r="25"
+              fill="none" stroke="#00FFD1" stroke-width="4.5" stroke-linecap="butt"
+              stroke-dasharray="52 8 44 6 26 35"
+              stroke-dashoffset="10"
+              filter="url(#f-ring)"/>
+      <!-- Flicker dots at gap edges -->
+      <circle cx="2"  cy="26" r="2.5" fill="#64FFF0" opacity="0.8"/>
+      <circle cx="38" cy="58" r="2"   fill="#64FFF0" opacity="0.7"/>
+      <circle cx="56" cy="42" r="2"   fill="#64FFF0" opacity="0.5"/>
+      <circle cx="5"  cy="48" r="1.8" fill="#64FFF0" opacity="0.4"/>
+    </g>
+
+    <!-- U: dimmer, readable -->
+    <g fill="#00FFD1" opacity="0.45">
+      <rect x="512" y="108" width="8"  height="52"/>
+      <rect x="520" y="160" width="22" height="8"/>
+      <rect x="542" y="108" width="8"  height="52"/>
+    </g>
+
+    <!-- T: fading out, dim but clearly recognizable -->
+    <g fill="#00FFD1" opacity="0.30">
+      <rect x="562" y="108" width="22" height="6"/>
+      <rect x="570" y="114" width="6"  height="48"/>
+    </g>
+  </g>
+
+  <!-- Lamp-beam accent dot (lens flare at shade tip) -->
+  <circle cx="165" cy="146" r="2.5" fill="#64FFF0" opacity="0.7"/>
+  <circle cx="165" cy="146" r="6"   fill="#00FFD1" opacity="0.12"/>
+</svg>

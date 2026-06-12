@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lights Out — Logo System Preview</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0f18; color: #c8d6e5; font-family: 'Segoe UI', system-ui, sans-serif; padding: 40px 32px; }
+  h1 { font-size: 28px; font-weight: 700; color: #00FFD1; margin-bottom: 6px; letter-spacing: 0.02em; }
+  h2 { font-size: 18px; font-weight: 600; color: #64FFF0; margin: 32px 0 14px; border-bottom: 1px solid rgba(0,255,209,0.12); padding-bottom: 6px; }
+  h3 { font-size: 13px; font-weight: 500; color: #8a9bb5; margin: 0 0 4px; }
+  p, li { font-size: 13px; line-height: 1.55; color: #8899aa; }
+  .section { margin-bottom: 36px; }
+  .card { background: #0e1521; border: 1px solid rgba(0,255,209,0.08); border-radius: 10px; padding: 20px; display: inline-flex; flex-direction: column; align-items: center; gap: 10px; }
+  .card-row { display: flex; flex-wrap: wrap; gap: 14px; }
+  .card img { display: block; }
+  .label { font-size: 11px; font-weight: 500; color: #6a7d94; text-transform: uppercase; letter-spacing: 0.06em; }
+  .swatch { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
+  .swatch-chip { width: 40px; height: 40px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06); flex-shrink: 0; }
+  .swatch-info { display: flex; flex-direction: column; font-size: 12px; line-height: 1.5; }
+  .swatch-hex { font-family: Consolas, 'Courier New', monospace; font-weight: 600; color: #c8d6e5; }
+  .swatch-desc { color: #6a7d94; }
+  .notes { background: #0e1521; border: 1px solid rgba(100,255,240,0.1); border-radius: 10px; padding: 18px 22px; margin-top: 10px; }
+  .notes ul { padding-left: 18px; }
+  .notes li { margin: 4px 0; }
+  .dark-bg { background: #050B10; padding: 16px 20px; border-radius: 10px; display: inline-block; }
+  .light-bg { background: #e8ecf0; padding: 16px 20px; border-radius: 10px; display: inline-block; }
+  .wordmark-row { display: flex; flex-direction: column; gap: 16px; }
+</style>
+</head>
+<body>
+
+<h1>Lights Out — Logo System</h1>
+<p>Brand mark for the Windows bedtime shutdown utility. Dark lamp, digital alarm-clock glow, countdown ring.</p>
+
+<!-- WORDMARK -->
+<div class="section">
+  <h2>1. Full Wordmark</h2>
+  <p style="margin-bottom:12px">Articulated desk lamp + "LIGHTS OUT" in segmented digital alarm-clock style. OUT fades left-to-right; O is a partial countdown ring.</p>
+  <div class="wordmark-row">
+    <div>
+      <h3>Dark background (standard)</h3>
+      <div class="dark-bg">
+        <img src="../../../electron/assets/brand/lights-out-wordmark.svg" alt="Lights Out Wordmark (dark)" style="max-width:100%;height:auto;width:800px">
+      </div>
+    </div>
+    <div>
+      <h3>Light/transparent background</h3>
+      <div class="light-bg">
+        <img src="../../../electron/assets/brand/lights-out-wordmark.svg" alt="Lights Out Wordmark (light)" style="max-width:100%;height:auto;width:800px">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- APP ICON -->
+<div class="section">
+  <h2>2. App Icon</h2>
+  <p style="margin-bottom:12px">Simplified lamp head + glowing partial countdown ring. No wordmark. Must read at 256, 128, 64, and 32 px.</p>
+  <div class="card-row">
+    <div class="card"><img src="../../../electron/assets/brand/lights-out-icon.svg" width="256" height="256" alt="256px"><span class="label">256px</span></div>
+    <div class="card"><img src="../../../electron/assets/brand/lights-out-icon.svg" width="128" height="128" alt="128px"><span class="label">128px</span></div>
+    <div class="card"><img src="../../../electron/assets/brand/lights-out-icon.svg" width="64" height="64" alt="64px"><span class="label">64px</span></div>
+    <div class="card"><img src="../../../electron/assets/brand/lights-out-icon.svg" width="32" height="32" alt="32px"><span class="label">32px</span></div>
+  </div>
+</div>
+
+<!-- TRAY ICON -->
+<div class="section">
+  <h2>3. Tray Icon</h2>
+  <p style="margin-bottom:12px">Ultra-simple: partial glowing ring + tiny lamp shade. No text. Must survive 24px and 16px renders.</p>
+  <div class="card-row">
+    <div class="card"><img src="../../../electron/assets/brand/lights-out-tray.svg" width="24" height="24" alt="24px"><span class="label">24px</span></div>
+    <div class="card"><img src="../../../electron/assets/brand/lights-out-tray.svg" width="16" height="16" alt="16px"><span class="label">16px</span></div>
+  </div>
+</div>
+
+<!-- COLOR PALETTE -->
+<div class="section">
+  <h2>4. Color Palette</h2>
+  <div>
+    <div class="swatch"><div class="swatch-chip" style="background:#00FFD1"></div><div class="swatch-info"><span class="swatch-hex">#00FFD1</span><span class="swatch-desc">Primary glow — text, ring accent, active highlights</span></div></div>
+    <div class="swatch"><div class="swatch-chip" style="background:#00BFA6"></div><div class="swatch-info"><span class="swatch-hex">#00BFA6</span><span class="swatch-desc">Deeper teal — ring gradient midpoint, subdued accents</span></div></div>
+    <div class="swatch"><div class="swatch-chip" style="background:#64FFF0"></div><div class="swatch-info"><span class="swatch-hex">#64FFF0</span><span class="swatch-desc">Cyan edge — flicker particles, beam highlights</span></div></div>
+    <div class="swatch"><div class="swatch-chip" style="background:#050B10"></div><div class="swatch-info"><span class="swatch-hex">#050B10</span><span class="swatch-desc">Background — near-black with blue undertone</span></div></div>
+    <div class="swatch"><div class="swatch-chip" style="background:#181e27"></div><div class="swatch-info"><span class="swatch-hex">#181e27</span><span class="swatch-desc">Lamp body — graphite / near-black metallic</span></div></div>
+  </div>
+</div>
+
+<!-- DESIGN NOTES -->
+<div class="section">
+  <h2>5. Design Notes</h2>
+  <div class="notes">
+    <ul>
+      <li><strong>Lamp:</strong> Sharp geometric articulated desk lamp built from mitered paths. No rounding, no soft curves. Base &rarr; two arm segments &rarr; trapezoid shade pointing right.</li>
+      <li><strong>Light beam:</strong> Semi-transparent cone from shade opening across the text area. Gradient fades from #00FFD1 at source to transparent at right edge.</li>
+      <li><strong>"LIGHTS":</strong> Custom blocky/geometric letterforms in #00FFD1. Designed to evoke digital alarm-clock segment displays without being literal 7-segment.</li>
+      <li><strong>"OUT":</strong> Intentional fade. O is a partial glowing countdown ring (stroke-dasharray). U is dim (~45% opacity). T is mostly dark (~18% opacity, just recognizable).</li>
+      <li><strong>Countdown ring:</strong> The broken circle with flickering dash gaps is the core brand motif. It appears in the wordmark O, the app icon, and the tray icon.</li>
+      <li><strong>Small-size strategy:</strong> Tray and small app icons drop the wordmark entirely. They reduce to: lamp shade silhouette + bold broken ring + minimal flicker dots. Stroke widths are intentionally thick (4-5px in 64px viewBox) so they survive 16px rasterization.</li>
+      <li><strong>No copyrighted characters.</strong> No Pixar/Luxo likeness. The lamp is a generic articulated architectural desk lamp with all-miter joints and sharp trapezoid shade.</li>
+      <li><strong>No yellow light.</strong> All glow is teal/cyan (#00FFD1 family).</li>
+      <li><strong>No tagline text.</strong> Only "LIGHTS OUT" appears in the full wordmark.</li>
+    </ul>
+  </div>
+</div>
+
+<p style="font-size:11px;color:#444d5a;margin-top:30px">
+  Assets: <code>electron/assets/brand/lights-out-wordmark.svg</code>
+  &middot; <code>lights-out-icon.svg</code>
+  &middot; <code>lights-out-tray.svg</code>
+</p>
+
+</body>
+</html>
