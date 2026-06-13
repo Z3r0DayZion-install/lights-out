@@ -1,40 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Lights Out Tray Icon: ultra-simple partial glowing ring + tiny lamp cue. Must survive 16px and 24px. -->
+<!-- Lights Out Tray Icon: bold glowing broken power ring. Ring-dominant, no lamp detail, built to survive 16px and 24px. -->
 <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <filter id="f-glow" x="-60%" y="-60%" width="220%" height="220%">
-      <feGaussianBlur stdDeviation="2" result="b"/>
-      <feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+      <feGaussianBlur stdDeviation="1.5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
     <linearGradient id="g-ring" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#00FFD1"/>
+      <stop offset="0"   stop-color="#00FFD1"/>
       <stop offset="0.5" stop-color="#64FFF0"/>
-      <stop offset="1" stop-color="#00BFA6"/>
+      <stop offset="1"   stop-color="#00BFA6"/>
     </linearGradient>
   </defs>
 
-  <!-- Lamp shade: ultra-simple sharp cone, top-left area (anchors icon meaning at small sizes) -->
-  <polygon points="14,12  28,10  44,42  30,44"
-           fill="#181e27" stroke="#0c1016" stroke-width="1.5" stroke-linejoin="miter"/>
-  <!-- Shade opening highlight -->
-  <polygon points="30,44  44,42  42,45  32,46" fill="#2a323c"/>
-  <!-- Core accent line inside shade -->
-  <line x1="20" y1="14" x2="34" y2="40" stroke="#252d38" stroke-width="1.5"/>
-
-  <!-- Bold broken power ring: thick strokes so it survives 16px rasterization -->
-  <g filter="url(#f-glow)">
-    <!-- Partial circle with power-symbol opening (~10 o'clock) -->
-    <circle cx="42" cy="34" r="14"
-            fill="none" stroke="url(#g-ring)" stroke-width="5" stroke-linecap="butt"
-            stroke-dasharray="24 8 26 7 20 5 8 40"
-            stroke-dashoffset="12"/>
-    <!-- Power notch: bold vertical bar inside the opening -->
-    <line x1="28" y1="20" x2="28" y2="27"
-          stroke="#00FFD1" stroke-width="5" stroke-linecap="butt"/>
+  <!-- Bold broken ring: thick strokes + round caps so it reads as a glowing ring at 16px.
+       Top gap holds the power notch; one flicker gap at lower-right keeps the broken-ring identity. -->
+  <g filter="url(#f-glow)" fill="none" stroke="url(#g-ring)" stroke-width="8.5" stroke-linecap="round">
+    <!-- Arc A: right side -->
+    <path d="M 42 16.68 A 20 20 0 0 1 42 51.32"/>
+    <!-- Arc B: bottom + left, up to the top gap -->
+    <path d="M 34.1 53.9 A 20 20 0 0 1 22 16.68"/>
+    <!-- Power notch: bold vertical bar protruding up through the top gap (classic power-button read).
+         Solid color, not the gradient: a vertical line has a zero-width bbox so an objectBoundingBox gradient won't paint it. -->
+    <line x1="32" y1="6" x2="32" y2="30" stroke="#3df5da"/>
   </g>
-
-  <!-- Flicker dots: sized up for small-icon readability -->
-  <circle cx="32" cy="47" r="2.5" fill="#64FFF0" opacity="0.85"/>
-  <circle cx="40" cy="48" r="2.2" fill="#64FFF0" opacity="0.65"/>
-  <circle cx="49" cy="42" r="2"   fill="#64FFF0" opacity="0.5"/>
 </svg>

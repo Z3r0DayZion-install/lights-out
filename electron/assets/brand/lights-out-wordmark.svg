@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Lights Out Wordmark: dark articulated lamp + digital alarm-clock "LIGHTS OUT" with fading/dimming OUT -->
-<svg width="800" height="220" viewBox="0 0 800 220" xmlns="http://www.w3.org/2000/svg">
+<svg width="636" height="220" viewBox="0 0 636 220" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <!-- Beam: semi-transparent cone from shade to right edge -->
     <linearGradient id="g-beam" x1="0" y1="0.5" x2="1" y2="0.5">
@@ -22,18 +22,24 @@
       <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
 
-    <!-- Lamp body gradient -->
+    <!-- Lamp body gradient (brighter graphite so the lamp reads against the near-black background) -->
     <linearGradient id="g-lamp" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#1e242d"/>
-      <stop offset="0.6" stop-color="#141920"/>
-      <stop offset="1" stop-color="#0c1016"/>
+      <stop offset="0" stop-color="#33404e"/>
+      <stop offset="0.6" stop-color="#222c37"/>
+      <stop offset="1" stop-color="#151b22"/>
     </linearGradient>
 
     <!-- Lamp highlight -->
     <linearGradient id="g-lamp-hl" x1="0" y1="0" x2="0.4" y2="1">
-      <stop offset="0" stop-color="#2a323c"/>
-      <stop offset="1" stop-color="#1a1f27"/>
+      <stop offset="0" stop-color="#465463"/>
+      <stop offset="1" stop-color="#2a323c"/>
     </linearGradient>
+
+    <!-- Soft teal halo behind the lamp head -->
+    <radialGradient id="g-lamp-glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#00FFD1" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#00FFD1" stop-opacity="0"/>
+    </radialGradient>
 
     <!-- Subtle grid pattern for digital background texture -->
     <pattern id="p-grid" width="8" height="8" patternUnits="userSpaceOnUse">
@@ -42,37 +48,40 @@
   </defs>
 
   <!-- Background -->
-  <rect width="800" height="220" rx="14" fill="#050B10"/>
+  <rect width="636" height="220" rx="14" fill="#050B10"/>
   <!-- Subtle digital grid texture -->
-  <rect width="800" height="220" rx="14" fill="url(#p-grid)"/>
+  <rect width="636" height="220" rx="14" fill="url(#p-grid)"/>
   <!-- Thin border -->
-  <rect x="0.5" y="0.5" width="799" height="219" rx="13.5"
+  <rect x="0.5" y="0.5" width="635" height="219" rx="13.5"
         fill="none" stroke="#00FFD1" stroke-opacity="0.06" stroke-width="1"/>
+
+  <!-- Soft teal halo behind the lamp head (reads as a lit lamp) -->
+  <circle cx="150" cy="128" r="58" fill="url(#g-lamp-glow)"/>
 
   <!-- ===== LAMP: sharp geometric articulated desk lamp ===== -->
   <g id="lamp" stroke-linejoin="miter">
     <!-- Base -->
-    <ellipse cx="72" cy="194" rx="26" ry="7" fill="#121820"/>
-    <ellipse cx="72" cy="193" rx="24" ry="5.5" fill="#1a202a"/>
+    <ellipse cx="72" cy="194" rx="26" ry="7" fill="#1a222c"/>
+    <ellipse cx="72" cy="193" rx="24" ry="5.5" fill="#27313d"/>
     <rect x="56" y="182" width="32" height="11" fill="url(#g-lamp)"/>
     <!-- Base accent line -->
-    <line x1="56" y1="186" x2="88" y2="186" stroke="#2a323c" stroke-width="1.5"/>
+    <line x1="56" y1="186" x2="88" y2="186" stroke="#3d4a5a" stroke-width="1.5"/>
 
     <!-- Lower arm -->
-    <line x1="72" y1="184" x2="105" y2="140" stroke="#181e27" stroke-width="8" stroke-linecap="butt"/>
-    <line x1="72" y1="184" x2="105" y2="140" stroke="#252d38" stroke-width="2.5" stroke-linecap="butt"/>
+    <line x1="72" y1="184" x2="105" y2="140" stroke="#222c37" stroke-width="8" stroke-linecap="butt"/>
+    <line x1="72" y1="184" x2="105" y2="140" stroke="#3d4a5a" stroke-width="2.5" stroke-linecap="butt"/>
 
     <!-- Mid joint: geometric bolt -->
-    <circle cx="105" cy="140" r="5" fill="#121820"/>
-    <circle cx="105" cy="140" r="3" fill="#252d38"/>
+    <circle cx="105" cy="140" r="5" fill="#1a222c"/>
+    <circle cx="105" cy="140" r="3" fill="#3d4a5a"/>
 
     <!-- Upper arm -->
-    <line x1="105" y1="140" x2="130" y2="100" stroke="#181e27" stroke-width="7" stroke-linecap="butt"/>
-    <line x1="105" y1="140" x2="130" y2="100" stroke="#252d38" stroke-width="2" stroke-linecap="butt"/>
+    <line x1="105" y1="140" x2="130" y2="100" stroke="#222c37" stroke-width="7" stroke-linecap="butt"/>
+    <line x1="105" y1="140" x2="130" y2="100" stroke="#3d4a5a" stroke-width="2" stroke-linecap="butt"/>
 
     <!-- Head joint -->
-    <circle cx="130" cy="100" r="4.5" fill="#121820"/>
-    <circle cx="130" cy="100" r="2.5" fill="#252d38"/>
+    <circle cx="130" cy="100" r="4.5" fill="#1a222c"/>
+    <circle cx="130" cy="100" r="2.5" fill="#3d4a5a"/>
 
     <!-- Shade: sharp trapezoid cone pointing right -->
     <polygon points="116,111  138,104  165,146  143,153"
@@ -80,16 +89,19 @@
     <!-- Shade face highlight -->
     <polygon points="121,113  136,107  156,145  145,149"
              fill="url(#g-lamp-hl)"/>
+    <!-- Teal rim light along shade back edge -->
+    <line x1="116" y1="111" x2="138" y2="104"
+          stroke="#22a596" stroke-width="2.5" stroke-linecap="round" opacity="0.75"/>
     <!-- Sharp rim edge at shade opening -->
     <line x1="143" y1="153" x2="165" y2="146"
-          stroke="#333c47" stroke-width="3.5" stroke-linecap="butt"/>
+          stroke="#52606f" stroke-width="3.5" stroke-linecap="butt"/>
     <!-- Inner shadow line along shade -->
     <line x1="126" y1="116" x2="148" y2="148"
           stroke="#0c1016" stroke-width="1.5" opacity="0.5"/>
   </g>
 
   <!-- ===== LIGHT BEAM from shade opening across text ===== -->
-  <polygon points="144,153  165,146  790,42  790,168"
+  <polygon points="144,153  165,146  636,52  636,158"
            fill="url(#g-beam)"/>
 
   <!-- ===== "LIGHTS OUT" TEXT ===== -->
@@ -169,14 +181,14 @@
     </g>
 
     <!-- U: dimmer, readable -->
-    <g fill="#00FFD1" opacity="0.45">
+    <g fill="#00FFD1" opacity="0.58">
       <rect x="512" y="108" width="8"  height="52"/>
       <rect x="520" y="160" width="22" height="8"/>
       <rect x="542" y="108" width="8"  height="52"/>
     </g>
 
     <!-- T: fading out, dim but clearly recognizable -->
-    <g fill="#00FFD1" opacity="0.30">
+    <g fill="#00FFD1" opacity="0.42">
       <rect x="562" y="108" width="22" height="6"/>
       <rect x="570" y="114" width="6"  height="48"/>
     </g>
