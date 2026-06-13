@@ -321,6 +321,7 @@ const els = {
   czClockStyle: document.getElementById('cz-clock-style'),
   czClockHands: document.getElementById('cz-clock-hands'),
   czClockSeconds: document.getElementById('cz-clock-seconds'),
+  czClockSweep: document.getElementById('cz-clock-sweep'),
   clockStyleGroup: document.getElementById('clock-style-group'),
   profilesList: document.getElementById('profiles-list'),
   btnExportProfiles: document.getElementById('btn-export-profiles'),
@@ -596,6 +597,8 @@ const state = {
   clockStyle: 'modern',
   clockHandColor: '#76c9ff',
   clockSeconds: true,
+  // Smooth sweeping second hand (premium watch glide) vs. a per-second tick.
+  clockSweep: true,
   // Tracks whether clock mode was dismissed by profile application (restore on cancel).
   _clockDismissedByProfile: false,
   // Custom timer name
@@ -959,7 +962,11 @@ function render() {
     const m = now.getMinutes().toString().padStart(2, '0');
     const face = state.clockFace || 'digital';
     const showAnalog = face === 'analog' || face === 'hybrid';
-    if (els.analogClock) els.analogClock.style.display = showAnalog ? '' : 'none';
+    if (els.analogClock) {
+      els.analogClock.style.display = showAnalog ? '' : 'none';
+      // Drop the sweep class while hidden so it re-syncs to real time on re-show.
+      if (!showAnalog) els.analogClock.classList.remove('sweep');
+    }
     if (showAnalog) {
       updateAnalogHands(now);
       // Hybrid: show digital readout inside the analog clock face.
@@ -976,7 +983,10 @@ function render() {
       els.timerLabel.textContent = 'ready';
     }
   } else {
-    if (els.analogClock) els.analogClock.style.display = 'none';
+    if (els.analogClock) {
+      els.analogClock.style.display = 'none';
+      els.analogClock.classList.remove('sweep');
+    }
     els.timerMain.classList.remove('hybrid-readout');
     els.timerMain.textContent = formatTime(displaySeconds);
     els.timerLabel.textContent = state.paused
@@ -1108,7 +1118,29 @@ function updateAnalogHands(now) {
   const hrDeg = hr * 30 + min * 0.5;
   if (els.clockHour) els.clockHour.setAttribute('transform', `rotate(${hrDeg} 50 50)`);
   if (els.clockMinute) els.clockMinute.setAttribute('transform', `rotate(${minDeg} 50 50)`);
-  if (els.clockSecond) els.clockSecond.setAttribute('transform', `rotate(${secDeg} 50 50)`);
+
+  // Second hand: a CSS-driven smooth sweep (premium watch glide) when enabled and
+  // the second hand is shown; otherwise the classic per-second tick via attribute.
+  // Under prefers-reduced-motion, fall back to ticking so the hand still advances
+  // (a disabled sweep animation would otherwise freeze it at 12 o'clock).
+  const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const sweepOn = state.clockSweep !== false && state.clockSeconds !== false && !prefersReduced;
+  if (els.clockSecond && els.analogClock) {
+    if (sweepOn) {
+      // Add the class + seed the animation-delay only on the transition into sweep,
+      // so we don't restart (and stutter) the animation every render tick.
+      if (!els.analogClock.classList.contains('sweep')) {
+        const secFrac = sec + now.getMilliseconds() / 1000;
+        els.clockSecond.removeAttribute('transform');
+        els.clockSecond.style.animationDelay = `-${secFrac.toFixed(3)}s`;
+        els.analogClock.classList.add('sweep');
+      }
+    } else {
+      els.analogClock.classList.remove('sweep');
+      els.clockSecond.style.animationDelay = '';
+      els.clockSecond.setAttribute('transform', `rotate(${secDeg} 50 50)`);
+    }
+  }
 }
 
 async function startTimer(seconds = inputSeconds()) {
@@ -2253,11 +2285,18 @@ function renderReceiptsModal(receipts, stats) {
     if (els.scheduleCheck.checked) selectClockTarget(els.scheduleTime.value);
   });
 
+  // Persist clock preferences immediately on change so they survive a relaunch
+  // without requiring an explicit Save.
+  const persistClockPrefs = () => {
+    try { api.saveAppSettings({ app: collectAppSettings() }); } catch (_) { /* no-op */ }
+  };
+
   if (els.czClockFace) {
     els.czClockFace.addEventListener('change', () => {
-      state.clockFace = els.czClockFace.value || 'digital';
+      state.clockFace = els.czClockFace.value || 'hybrid';
       updateClockStyleVisibility();
       render();
+      persistClockPrefs();
     });
   }
 
@@ -2266,6 +2305,7 @@ function renderReceiptsModal(receipts, stats) {
       state.clockStyle = els.czClockStyle.value || 'modern';
       applyClockStyle();
       render();
+      persistClockPrefs();
     });
   }
 
@@ -2274,6 +2314,8 @@ function renderReceiptsModal(receipts, stats) {
       state.clockHandColor = els.czClockHands.value || '#76c9ff';
       applyClockStyle();
     });
+    // Persist on commit (not on every drag frame).
+    els.czClockHands.addEventListener('change', persistClockPrefs);
   }
 
   if (els.czClockSeconds) {
@@ -2281,6 +2323,17 @@ function renderReceiptsModal(receipts, stats) {
       state.clockSeconds = els.czClockSeconds.checked;
       applyClockStyle();
       render();
+      persistClockPrefs();
+    });
+  }
+
+  if (els.czClockSweep) {
+    els.czClockSweep.addEventListener('change', () => {
+      state.clockSweep = els.czClockSweep.checked;
+      // Force a clean re-sync of the sweep animation on the next render.
+      if (els.analogClock) els.analogClock.classList.remove('sweep');
+      render();
+      persistClockPrefs();
     });
   }
 
@@ -2694,7 +2747,8 @@ function collectAppSettings() {
     clockFace: els.czClockFace?.value || 'hybrid',
     clockStyle: els.czClockStyle?.value || 'modern',
     clockHandColor: els.czClockHands?.value || '#76c9ff',
-    clockSeconds: els.czClockSeconds ? els.czClockSeconds.checked : true
+    clockSeconds: els.czClockSeconds ? els.czClockSeconds.checked : true,
+    clockSweep: els.czClockSweep ? els.czClockSweep.checked : true
   };
 }
 
@@ -2731,9 +2785,11 @@ function applyAppSettings(app) {
   state.clockStyle = app.clockStyle || 'modern';
   state.clockHandColor = app.clockHandColor || '#76c9ff';
   state.clockSeconds = app.clockSeconds !== false;
+  state.clockSweep = app.clockSweep !== false;
   if (els.czClockStyle) els.czClockStyle.value = state.clockStyle;
   if (els.czClockHands) els.czClockHands.value = state.clockHandColor;
   if (els.czClockSeconds) els.czClockSeconds.checked = state.clockSeconds;
+  if (els.czClockSweep) els.czClockSweep.checked = state.clockSweep;
   applyClockStyle();
   updateClockStyleVisibility();
   state.bedtime = app.bedtime || '';

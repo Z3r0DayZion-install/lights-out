@@ -3336,8 +3336,20 @@ body.mini-mode .ll-line {
   stroke: var(--clock-hand-color);
   stroke-width: 1.1;
   opacity: 0.85;
+  transform-box: view-box;
+  transform-origin: 50px 50px;
 }
 .analog-clock.hide-seconds .analog-hand.second { display: none; }
+
+/* Smooth sweeping second hand: GPU-driven, continuous glide (premium watch feel).
+   The per-frame angle is seeded once via animation-delay in renderer.js. */
+@keyframes clock-sweep { to { transform: rotate(360deg); } }
+.analog-clock.sweep .analog-hand.second {
+  animation: clock-sweep 60s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .analog-clock.sweep .analog-hand.second { animation: none; }
+}
 .analog-digital {
   font-family: var(--font-mono);
   font-size: 11px;
