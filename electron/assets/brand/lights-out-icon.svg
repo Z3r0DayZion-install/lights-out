@@ -57,15 +57,18 @@
     <rect x="145" y="103" width="6" height="9" fill="#121820"/>
     <rect x="144" y="105" width="8" height="2.5" fill="#252d38"/>
 
-    <!-- Shade: sharp trapezoid cone pointing right-down -->
+    <!-- Shade: sharp trapezoid cone pointing right-down (lighter graphite + teal rim so the silhouette reads small) -->
     <polygon points="132,112  156,106  184,150  160,156"
-             fill="#181e27" stroke="#0c1016" stroke-width="2"/>
+             fill="#222c38" stroke="#0c1016" stroke-width="2"/>
     <!-- Shade face highlight -->
     <polygon points="138,114  154,109  174,146  158,150"
-             fill="#252d38"/>
+             fill="#33414f"/>
+    <!-- Teal rim light along the shade back edge -->
+    <line x1="132" y1="112" x2="156" y2="106"
+          stroke="#1f8f82" stroke-width="2.5" stroke-linecap="round" opacity="0.7"/>
     <!-- Sharp rim edge at opening -->
     <line x1="160" y1="156" x2="184" y2="150"
-          stroke="#333c47" stroke-width="3" stroke-linecap="butt"/>
+          stroke="#3f4d5b" stroke-width="3" stroke-linecap="butt"/>
   </g>
 
   <!-- ===== GLOW / POWER RING ===== -->
@@ -75,16 +78,16 @@
             fill="none" stroke="#00FFD1" stroke-width="20" opacity="0.04"
             filter="url(#f-ambient)"/>
 
-    <!-- Bold broken countdown ring with flickering gaps -->
+    <!-- Bold broken countdown ring with flickering gaps (thicker so it survives 32px) -->
     <circle cx="172" cy="155" r="40"
-            fill="none" stroke="url(#g-ring)" stroke-width="5" stroke-linecap="butt"
+            fill="none" stroke="url(#g-ring)" stroke-width="7.5" stroke-linecap="butt"
             stroke-dasharray="52 6 58 4 44 5 34 44"
             stroke-dashoffset="16"
             filter="url(#f-ring)"/>
 
-    <!-- Power notch: vertical bar in the top opening -->
-    <line x1="142" y1="117" x2="142" y2="131"
-          stroke="url(#g-ring)" stroke-width="5" stroke-linecap="butt"
+    <!-- Power notch: vertical bar in the top opening (solid color; a vertical line has a zero-width bbox so a gradient is unreliable) -->
+    <line x1="142" y1="114" x2="142" y2="132"
+          stroke="#3df5da" stroke-width="7.5" stroke-linecap="round"
           filter="url(#f-ring)"/>
 
     <!-- Flicker particles -->
