@@ -46,10 +46,14 @@ verify exactly what you downloaded. Builds are produced and published by CI, and
 each release is gated on `node --check`, a smoke suite, and a successful package
 step.
 
-**Latest: v10.0.4** - customizable clock faces (digital / analog / hybrid), a new
-desk-lamp logo, right-click menus on profiles and the clock, and a smoother
+**Latest: v10.0.5** - a crisp small-size app icon (sharp at 16/24/32 px in the
+taskbar/titlebar), a proper About dialog featuring the brand wordmark, and a
+refined "LIGHTS OUT" wordmark with a transparent variant.
+Release notes: https://github.com/Z3r0DayZion-install/lights-out/releases/tag/v10.0.5
+
+Previously, v10.0.4 added customizable clock faces (digital / analog / hybrid), a
+new desk-lamp logo, right-click menus on profiles and the clock, and a smoother
 "save this timer as a profile" flow.
-Release notes: https://github.com/Z3r0DayZion-install/lights-out/releases/tag/v10.0.4
 
 ---
 
