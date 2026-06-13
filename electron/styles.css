@@ -306,10 +306,10 @@ body.warm-shift .ambient-canvas {
 }
 
 .brand-mark {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   display: block;
-  filter: drop-shadow(0 0 6px rgba(91, 140, 255, 0.55));
+  filter: drop-shadow(0 0 6px rgba(0, 255, 209, 0.55));
   user-select: none;
   -webkit-user-drag: none;
 }

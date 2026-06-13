@@ -1,13 +1,15 @@
-// Renders assets/icon.svg into multi-resolution PNGs and a Windows .ico,
-// plus a high-res brand PNG. Run with: node scripts/make-icons.js
+// Renders the refined Lights Out brand SVGs (assets/brand/*) into multi-resolution
+// PNGs and a Windows .ico. Run with: node scripts/make-icons.js
 const fs = require('fs');
 const path = require('path');
 const sharp = require('sharp');
 
 const root = path.join(__dirname, '..');
 const assets = path.join(root, 'assets');
-const iconSvg = path.join(assets, 'icon.svg');
-const logoSvg = path.join(assets, 'logo.svg');
+const brand = path.join(assets, 'brand');
+const iconSvg = path.join(brand, 'lights-out-icon.svg');
+const logoSvg = path.join(brand, 'lights-out-icon.svg');
+const traySvg = path.join(brand, 'lights-out-tray.svg');
 
 const icoSizes = [16, 24, 32, 48, 64, 128, 256];
 
@@ -42,8 +44,8 @@ async function render(svgPath, size) {
     .toFile(path.join(assets, 'logo-512.png'));
   console.log('Wrote assets/logo-512.png');
 
-  // Pre-rendered tray glyph (simplified mark) for crisp 16px tray compositing.
-  await sharp(fs.readFileSync(logoSvg), { density: 384 })
+  // Pre-rendered tray glyph from the dedicated transparent tray mark for crisp 16px compositing.
+  await sharp(fs.readFileSync(traySvg), { density: 384 })
     .resize(32, 32, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .png()
     .toFile(path.join(assets, 'tray-32.png'));
