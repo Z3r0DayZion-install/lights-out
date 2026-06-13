@@ -46,14 +46,17 @@ verify exactly what you downloaded. Builds are produced and published by CI, and
 each release is gated on `node --check`, a smoke suite, and a successful package
 step.
 
-**Latest: v10.0.6** - a smooth sweeping second hand, a new Classic (Roman) watch
-face, Hybrid as the default clock, clock prefs that persist instantly, and a fix
-for a startup crash when a companion port was already in use.
-Release notes: https://github.com/Z3r0DayZion-install/lights-out/releases/tag/v10.0.6
+**Latest: v10.0.7** - fixed clock preference restoration on app launch and
+prevented saved clock settings from being overwritten by startup defaults. Your
+clock face, style, sweep, and second-hand choices now survive a relaunch.
+Release notes: https://github.com/Z3r0DayZion-install/lights-out/releases/tag/v10.0.7
 
-Previously, v10.0.5 brought a crisp small-size app icon and an About dialog with
-the brand wordmark; v10.0.4 added customizable clock faces (digital / analog /
-hybrid), the desk-lamp logo, and right-click menus on profiles and the clock.
+Previously, v10.0.6 added a smooth sweeping second hand, a new Classic (Roman)
+watch face, Hybrid as the default clock, and a fix for a startup crash when a
+companion port was already in use; v10.0.5 brought a crisp small-size app icon
+and an About dialog with the brand wordmark; v10.0.4 added customizable clock
+faces (digital / analog / hybrid), the desk-lamp logo, and right-click menus on
+profiles and the clock.
 
 ---
 

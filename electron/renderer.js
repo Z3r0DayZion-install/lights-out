@@ -2631,6 +2631,14 @@ function renderReceiptsModal(receipts, stats) {
   if (els.btnImportUrl) {
     els.btnImportUrl.addEventListener('click', importCalendarUrl);
   }
+
+  // loadSleepDebt/loadMorningProof are declared in this function's scope, so
+  // they must be invoked here (wireEvents runs before loadInitialData). Calling
+  // them from the global loadInitialData throws a ReferenceError, which the
+  // bedtime-loader catch previously swallowed, silently aborting settings
+  // rehydration (e.g. clock preferences). Run them here, isolated.
+  try { loadSleepDebt(); } catch (e) { console.error('loadSleepDebt failed:', e); }
+  try { loadMorningProof(); } catch (e) { console.error('loadMorningProof failed:', e); }
 }
 
 function updateLightsUI() {
@@ -2653,38 +2661,31 @@ async function loadInitialData() {
       api.getSmartLightConfig()
     ]);
 
-    // Load profiles
-    await loadProfiles();
-
-    // Load streaks data
-    loadStreaks();
-    // Load sleep debt data
-    loadSleepDebt();
-    // Load morning proof / last run receipt
-    loadMorningProof();
-
-    els.batteryLevel.textContent = systemInfo.battery === 'N/A' ? 'N/A' : `${systemInfo.battery}%`;
-    const pp = systemInfo.powerPlan;
-    els.powerPlan.textContent = (!pp || pp === 'Unknown') ? (systemInfo.battery === 'N/A' ? 'AC Power' : 'Unknown') : pp;
-
+    // --- Critical: rehydrate persisted settings FIRST. A failure in any
+    // non-critical loader below must never prevent saved preferences (clock
+    // face/style/sweep/seconds, customization, Last Light) from being applied. ---
     if (typeof appSettings.runAtLogin === 'boolean') {
       state.runAtLogin = appSettings.runAtLogin;
     }
-
-    // Rehydrate persisted app settings
     if (appSettings.app) applyAppSettings(appSettings.app);
-
-    // Rehydrate persisted customization
     if (appSettings.customization) {
       state.customization = { ...state.customization, ...appSettings.customization };
     }
     applyCustomization(state.customization);
-
-    // Rehydrate Last Light config
     if (appSettings.lastLight) {
       state.lastLight = { ...state.lastLight, ...appSettings.lastLight };
     }
     updateLastLightUIFromState();
+
+    // System info (non-critical display).
+    els.batteryLevel.textContent = systemInfo.battery === 'N/A' ? 'N/A' : `${systemInfo.battery}%`;
+    const pp = systemInfo.powerPlan;
+    els.powerPlan.textContent = (!pp || pp === 'Unknown') ? (systemInfo.battery === 'N/A' ? 'AC Power' : 'Unknown') : pp;
+
+    // Non-critical loaders: isolate each so one failure cannot abort the rest.
+    // (Sleep debt and morning proof load from wireEvents, where they are scoped.)
+    try { await loadProfiles(); } catch (e) { console.error('loadProfiles failed:', e); }
+    try { loadStreaks(); } catch (e) { console.error('loadStreaks failed:', e); }
 
     // Offer recovery of an interrupted timer
     if (appSettings.recoverableTimer) {
@@ -2720,7 +2721,8 @@ async function loadInitialData() {
     if (appSettings.accountability) {
       applyAccountabilitySettings(appSettings.accountability);
     }
-  } catch {
+  } catch (e) {
+    console.error('loadInitialData failed:', e);
     els.batteryLevel.textContent = 'N/A';
     els.powerPlan.textContent = previewMode ? 'Preview' : 'AC Power';
   }
@@ -2743,12 +2745,14 @@ function collectAppSettings() {
     nightLightOnDim: els.chkNightlightDim?.checked || false,
     pauseMediaOnDim: els.chkPauseMediaDim?.checked || false,
     lockoutOnDim: els.chkLockoutDim?.checked || false,
-    clockMode: els.chkClockMode?.checked || false,
-    clockFace: els.czClockFace?.value || 'hybrid',
-    clockStyle: els.czClockStyle?.value || 'modern',
-    clockHandColor: els.czClockHands?.value || '#76c9ff',
-    clockSeconds: els.czClockSeconds ? els.czClockSeconds.checked : true,
-    clockSweep: els.czClockSweep ? els.czClockSweep.checked : true
+    // Clock prefs come from applied state (the source of truth), not raw control
+    // values, so a save can never clobber restored prefs with stale UI defaults.
+    clockMode: typeof state.clockMode === 'boolean' ? state.clockMode : (els.chkClockMode?.checked || false),
+    clockFace: state.clockFace || els.czClockFace?.value || 'hybrid',
+    clockStyle: state.clockStyle || els.czClockStyle?.value || 'modern',
+    clockHandColor: state.clockHandColor || els.czClockHands?.value || '#76c9ff',
+    clockSeconds: state.clockSeconds !== false,
+    clockSweep: state.clockSweep !== false
   };
 }
 
@@ -3001,22 +3005,16 @@ function setupCustomizeHandlers() {
   });
   els.chkIdleDetect?.addEventListener('change', () => {
     api.setIdleThreshold?.(els.chkIdleDetect.checked ? 300 : 0);
-    // Persist to settings.
-    const app = api.getAppSettings?.() || {};
-    app.idleDetectionEnabled = els.chkIdleDetect.checked;
-    api.saveAppSettings?.({ app });
+    // Persist only the changed key; saveAppSettings deep-merges on the main side.
+    api.saveAppSettings?.({ app: { idleDetectionEnabled: els.chkIdleDetect.checked } });
   });
   els.chkBedtimeReminder?.addEventListener('change', () => {
     api.setBedtimeReminder?.(els.chkBedtimeReminder.checked ? 15 : 0);
-    const app = api.getAppSettings?.() || {};
-    app.bedtimeReminderEnabled = els.chkBedtimeReminder.checked;
-    api.saveAppSettings?.({ app });
+    api.saveAppSettings?.({ app: { bedtimeReminderEnabled: els.chkBedtimeReminder.checked } });
   });
   els.chkCalendarAutostart?.addEventListener('change', () => {
     api.setCalendarAutoStart?.(els.chkCalendarAutostart.checked);
-    const app = api.getAppSettings?.() || {};
-    app.calendarAutoStart = els.chkCalendarAutostart.checked;
-    api.saveAppSettings?.({ app });
+    api.saveAppSettings?.({ app: { calendarAutoStart: els.chkCalendarAutostart.checked } });
   });
 }
 
