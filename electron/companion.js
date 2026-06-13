@@ -147,6 +147,18 @@ function start() {
   server = http.createServer(requestHandler);
   server.on('upgrade', upgradeHandler);
 
+  // Degrade gracefully if the port is already taken (most commonly another
+  // Lights Out instance, or a leftover dev build). Without this handler the
+  // server emits an unhandled 'error' that crashes the whole main process.
+  server.on('error', (err) => {
+    server = null;
+    if (err && err.code === 'EADDRINUSE') {
+      console.warn(`Companion PWA port ${PWA_PORT} is already in use - companion features disabled for this instance.`);
+    } else {
+      console.warn(`Companion PWA server error: ${err && (err.message || err.code)}`);
+    }
+  });
+
   server.listen(PWA_PORT, '0.0.0.0', () => {
     console.log(`Companion PWA running at http://localhost:${PWA_PORT}`);
   });

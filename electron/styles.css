@@ -3378,6 +3378,27 @@ body.mini-mode .ll-line {
 .analog-clock.style-neon .tick.major { stroke: var(--clock-hand-color); opacity: 0.85; }
 .analog-clock.style-neon .analog-cap { filter: drop-shadow(0 0 2px var(--clock-hand-color)); }
 
+/* Dial rim (shown on the Classic face) */
+.analog-rim { fill: none; stroke: rgba(255, 255, 255, 0.14); stroke-width: 1; display: none; }
+
+/* Roman numerals: hidden unless the Classic style is active */
+.analog-numeral {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 7px;
+  font-weight: 600;
+  fill: #e8ecf1;
+  display: none;
+}
+
+/* Classic: Roman numerals replace the tick marks, with a subtle dial rim and tapered hands */
+.analog-clock.style-classic .analog-numeral { display: block; }
+.analog-clock.style-classic .analog-rim { display: block; }
+.analog-clock.style-classic .tick { display: none; }
+.analog-clock.style-classic .analog-hand { stroke-linecap: round; }
+.analog-clock.style-classic .analog-hand.hour { stroke: #e8ecf1; stroke-width: 3; }
+.analog-clock.style-classic .analog-hand.minute { stroke-width: 2.2; }
+.analog-clock.style-classic .analog-hand.second { stroke-width: 0.9; opacity: 0.8; }
+
 /* Right-click context menu (profile cards, clock face) */
 .context-menu {
   position: fixed;

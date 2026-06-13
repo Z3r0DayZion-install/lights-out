@@ -149,6 +149,16 @@ function startCommandServer(onCommand) {
     }
   });
 
+  // Degrade gracefully if the port is taken instead of crashing the main process.
+  commandServer.on('error', (err) => {
+    commandServer = null;
+    if (err && err.code === 'EADDRINUSE') {
+      console.warn('Family command port 58734 already in use - family remote disabled for this instance.');
+    } else {
+      console.warn(`Family command server error: ${err && (err.message || err.code)}`);
+    }
+  });
+
   commandServer.listen(58734, '0.0.0.0', () => {
     console.log('Family command server on port 58734');
   });

@@ -189,7 +189,9 @@
           <div class="timer-display">
             <div class="timer-name" id="timer-name" contenteditable="true" spellcheck="false" data-placeholder="Name this session">Witching Hour</div>
             <svg class="analog-clock" id="analog-clock" viewBox="0 0 100 100" style="display:none" aria-hidden="true">
+              <circle class="analog-rim" cx="50" cy="50" r="46.5"/>
               <g class="analog-ticks" id="analog-ticks"></g>
+              <g class="analog-numerals" id="analog-numerals"></g>
               <line class="analog-hand hour" id="clock-hour" x1="50" y1="50" x2="50" y2="30"/>
               <line class="analog-hand minute" id="clock-minute" x1="50" y1="50" x2="50" y2="20"/>
               <line class="analog-hand second" id="clock-second" x1="50" y1="50" x2="50" y2="16"/>
@@ -1051,7 +1053,7 @@
             <select id="cz-clockface">
               <option value="digital">Digital</option>
               <option value="analog">Analog</option>
-              <option value="hybrid">Hybrid</option>
+              <option value="hybrid" selected>Hybrid</option>
             </select>
           </div>
 
@@ -1063,6 +1065,7 @@
                 <option value="bold">Bold</option>
                 <option value="minimal">Minimal</option>
                 <option value="neon">Neon</option>
+                <option value="classic">Classic (Roman)</option>
               </select>
             </div>
             <div class="option-group">

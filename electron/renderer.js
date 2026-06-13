@@ -313,6 +313,7 @@ const els = {
   czClockFace: document.getElementById('cz-clockface'),
   analogClock: document.getElementById('analog-clock'),
   analogTicks: document.getElementById('analog-ticks'),
+  analogNumerals: document.getElementById('analog-numerals'),
   clockHour: document.getElementById('clock-hour'),
   clockMinute: document.getElementById('clock-minute'),
   clockSecond: document.getElementById('clock-second'),
@@ -589,8 +590,8 @@ const state = {
   phase: 'idle',
   // Clock Mode: show current time when idle
   clockMode: true,
-  // Clock face style when idle: 'digital' | 'analog' | 'hybrid'
-  clockFace: 'digital',
+  // Clock face style when idle: 'digital' | 'analog' | 'hybrid'. Hybrid is the default.
+  clockFace: 'hybrid',
   // Analog/hybrid clock customization.
   clockStyle: 'modern',
   clockHandColor: '#76c9ff',
@@ -1071,6 +1072,28 @@ function buildAnalogTicks() {
     line.setAttribute('y2', (50 - outer * Math.cos(angle)).toFixed(2));
     line.setAttribute('class', major ? 'tick major' : 'tick');
     els.analogTicks.appendChild(line);
+  }
+  buildAnalogNumerals();
+}
+
+// Build the 12 Roman numerals for the "Classic" clock face once.
+// Hidden by default; CSS reveals them only for .style-classic.
+function buildAnalogNumerals() {
+  if (!els.analogNumerals || els.analogNumerals.childNodes.length) return;
+  const ns = 'http://www.w3.org/2000/svg';
+  // Index 0 = 12 o'clock, going clockwise. IIII (not IV) is the horological convention.
+  const roman = ['XII', 'I', 'II', 'III', 'IIII', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'];
+  const r = 38;
+  for (let i = 0; i < 12; i++) {
+    const angle = (i * 30) * Math.PI / 180;
+    const t = document.createElementNS(ns, 'text');
+    t.setAttribute('x', (50 + r * Math.sin(angle)).toFixed(2));
+    t.setAttribute('y', (50 - r * Math.cos(angle)).toFixed(2));
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('dominant-baseline', 'central');
+    t.setAttribute('class', 'analog-numeral');
+    t.textContent = roman[i];
+    els.analogNumerals.appendChild(t);
   }
 }
 
@@ -2668,7 +2691,7 @@ function collectAppSettings() {
     pauseMediaOnDim: els.chkPauseMediaDim?.checked || false,
     lockoutOnDim: els.chkLockoutDim?.checked || false,
     clockMode: els.chkClockMode?.checked || false,
-    clockFace: els.czClockFace?.value || 'digital',
+    clockFace: els.czClockFace?.value || 'hybrid',
     clockStyle: els.czClockStyle?.value || 'modern',
     clockHandColor: els.czClockHands?.value || '#76c9ff',
     clockSeconds: els.czClockSeconds ? els.czClockSeconds.checked : true
@@ -2703,7 +2726,7 @@ function applyAppSettings(app) {
   if (els.chkClockMode) els.chkClockMode.checked = app.clockMode !== false;
   state.clockMode = app.clockMode !== false;
   if (state.clockMode) state._clockDismissedByProfile = false; // explicit re-enable clears dismissal
-  state.clockFace = app.clockFace || 'digital';
+  state.clockFace = app.clockFace || 'hybrid';
   if (els.czClockFace) els.czClockFace.value = state.clockFace;
   state.clockStyle = app.clockStyle || 'modern';
   state.clockHandColor = app.clockHandColor || '#76c9ff';
@@ -2721,7 +2744,7 @@ function applyAppSettings(app) {
 function applyClockStyle() {
   if (!els.analogClock) return;
   const style = state.clockStyle || 'modern';
-  els.analogClock.classList.remove('style-modern', 'style-bold', 'style-minimal', 'style-neon');
+  els.analogClock.classList.remove('style-modern', 'style-bold', 'style-minimal', 'style-neon', 'style-classic');
   els.analogClock.classList.add('style-' + style);
   els.analogClock.classList.toggle('hide-seconds', state.clockSeconds === false);
   els.analogClock.style.setProperty('--clock-hand-color', state.clockHandColor || '#76c9ff');
